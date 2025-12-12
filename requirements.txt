@@ -1,0 +1,7 @@
+# Production dependencies
+fastmcp
+requests
+python-dotenv
+fastapi
+uvicorn
+pyyaml

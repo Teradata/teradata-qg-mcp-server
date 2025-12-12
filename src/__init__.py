@@ -1,0 +1,1 @@
+# Teradata QueryGrid MCP Server

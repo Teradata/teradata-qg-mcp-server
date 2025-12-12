@@ -1,0 +1,61 @@
+# Teradata QueryGrid MCP Server Configuration
+# This file contains default configuration values that can be overridden by environment variables or command-line arguments
+
+# Server Configuration
+server:
+  # Host to bind the MCP server to
+  # Default: 0.0.0.0 (all interfaces)
+  # Can be overridden by QG_MCP_SERVER_HOST environment variable or --host command-line argument
+  host: "0.0.0.0"
+
+  # Port to bind the MCP server to
+  # Default: 8000
+  # Can be overridden by QG_MCP_SERVER_PORT environment variable or --port command-line argument
+  port: 8000
+
+  # Health check timeout in seconds
+  # Used when checking server status via /health endpoint
+  # Default: 5 seconds
+  health_check_timeout: 5
+
+# QueryGrid Manager Connection Settings
+querygrid:
+  # Request timeout in seconds for API calls to QueryGrid Manager
+  # Default: 10 seconds
+  request_timeout: 10
+
+  # Default SSL verification behavior
+  # Default: true (verify SSL certificates)
+  # Can be overridden by QG_MANAGER_VERIFY_SSL environment variable or --qgm-verify-ssl command-line argument
+  verify_ssl: true
+
+# Logging Configuration
+logging:
+  # Maximum size of a single log file in megabytes before rotation
+  # Default: 100 MB
+  max_file_size_mb: 100
+
+  # Number of days to retain log files
+  # Log files older than this will be automatically deleted
+  # Default: 30 days (1 month)
+  retention_days: 30
+
+  # Number of backup log files to keep
+  # This works in conjunction with retention_days
+  # The system will keep whichever is reached first
+  # Default: 10 backup files
+  backup_count: 10
+
+  # Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+  # Can be overridden by QG_MCP_SERVER_LOG_LEVEL environment variable or --log-level command-line argument
+  # Default: INFO
+  log_level: INFO
+
+  # Log format
+  # Available fields: %(asctime)s, %(name)s, %(levelname)s, %(message)s, %(pathname)s, %(lineno)d
+  # Default format includes timestamp, logger name, level, and message
+  log_format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+  # Date format for log timestamps
+  # Default: ISO 8601 format
+  date_format: "%Y-%m-%d %H:%M:%S"

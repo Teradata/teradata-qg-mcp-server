@@ -1,0 +1,21 @@
+# Development and testing dependencies
+# Install with: pip install -r requirements-dev.txt
+
+# Include production dependencies
+-r requirements.txt
+
+# Testing
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+pytest-cov>=4.1.0
+
+# Type checking
+mypy>=1.8.0
+types-PyYAML
+types-requests
+
+# Code formatting and linting
+ruff>=0.1.0
+
+# Development tools
+ipython  # Enhanced Python shell

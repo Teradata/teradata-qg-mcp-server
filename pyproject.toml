@@ -1,0 +1,56 @@
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+# E203: Whitespace before ':' - conflicts with Black/Ruff formatting
+ignore = ["E203"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+markers = [
+    "unit: marks tests as unit tests that don't require external services",
+    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+# Coverage options - fail if coverage is below 85%
+addopts = "--cov=src --cov-report=html --cov-report=term-missing --cov-report=xml --cov-fail-under=85"
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/.venv/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+    "@abc.abstractmethod",
+]
+show_missing = true
+precision = 2
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.pyright]
+# Strict type checking for src code
+typeCheckingMode = "standard"
+reportMissingTypeStubs = false
+# More lenient type checking for tests
+executionEnvironments = [
+    { root = "tests", typeCheckingMode = "basic", reportOptionalMemberAccess = false, reportOptionalCall = false, reportOptionalIterable = false, reportOptionalContextManager = false, reportOptionalOperand = false, reportUnknownMemberType = false, reportUnknownVariableType = false, reportUnknownArgumentType = false, reportUnknownParameterType = false, reportUnknownLambdaType = false, reportImplicitStringConcatenation = false }
+]
+
