@@ -16,9 +16,13 @@ def qg_get_software(
 ) -> dict[str, Any]:
     """
     Get QueryGrid software information for all of the uploaded software packages.
+
+    ALL PARAMETERS ARE OPTIONAL. If the user does not specify a filter, retrieve all software packages.
+
     Args:
-        filter_by_name (str | None): [Optional] Get software associated with the specified name (case insensitive).
+        filter_by_name (str | None): [OPTIONAL] Get software associated with the specified name (case insensitive).
             Wildcard matching with '*' is supported.
+
     Returns:
         ResponseType: formatted response with operation results + metadata
     """
@@ -37,6 +41,8 @@ def qg_get_software(
 def qg_get_software_jdbc_driver() -> dict[str, Any]:
     """
     Get QueryGrid software information for all of the uploaded JDBC driver software packages.
+
+    NO PARAMETERS REQUIRED.
 
     Returns:
         ResponseType: formatted response with operation results + metadata
@@ -59,8 +65,12 @@ def qg_get_software_jdbc_driver_by_name(
     """
     Get QueryGrid software information for the uploaded software packages related to a specific JDBC driver name.
 
+    MANDATORY PARAMETER: Ask the user for the JDBC driver name if not provided.
+
     Args:
-        jdbc_driver_name (str): The JDBC driver name to find
+        jdbc_driver_name (str): [MANDATORY] The JDBC driver name to find.
+            Ask the user: "What is the JDBC driver name you're looking for?"
+            If unsure, suggest using qg_get_software_jdbc_driver to list all JDBC drivers.
 
     Returns:
         ResponseType: formatted response with operation results + metadata
@@ -83,9 +93,12 @@ def qg_get_software_by_id(
     """
     Get a specific QueryGrid software by ID.
 
+    MANDATORY PARAMETER: Ask the user for the software ID if not provided.
+
     Args:
-        id (str): The ID of the software to retrieve. ID is in UUID format.
-            e.g., '123e4567-e89b-12d3-a456-426614174000'.
+        id (str): [MANDATORY] The ID of the software to retrieve. ID is in UUID format.
+            e.g., '123e4567-e89b-12d3-a456-426614174000'
+            If the user doesn't know the ID, suggest using qg_get_software to list all software packages.
 
     Returns:
         ResponseType: formatted response with operation results + metadata
@@ -108,9 +121,12 @@ def qg_delete_software(
     """
     Delete a software by ID.
 
+    MANDATORY PARAMETER: Ask the user for the software ID if not provided.
+
     Args:
-        id (str): The ID of the software to delete. ID is in UUID format.
-            e.g., '123e4567-e89b-12d3-a456-426614174000'.
+        id (str): [MANDATORY] The ID of the software to delete. ID is in UUID format.
+            e.g., '123e4567-e89b-12d3-a456-426614174000'
+            If the user doesn't know the ID, suggest using qg_get_software to list all software packages.
 
     Returns:
         ResponseType: formatted response with operation results + metadata
@@ -133,9 +149,12 @@ def qg_delete_jdbc_driver(
     """
     Delete a JDBC driver by ID.
 
+    MANDATORY PARAMETER: Ask the user for the JDBC driver ID if not provided.
+
     Args:
-        id (str): The ID of the JDBC driver to delete. ID is in UUID format.
-            e.g., '123e4567-e89b-12d3-a456-426614174000'.
+        id (str): [MANDATORY] The ID of the JDBC driver to delete. ID is in UUID format.
+            e.g., '123e4567-e89b-12d3-a456-426614174000'
+            If the user doesn't know the ID, suggest using qg_get_software_jdbc_driver to list all JDBC drivers.
 
     Returns:
         ResponseType: formatted response with operation results + metadata

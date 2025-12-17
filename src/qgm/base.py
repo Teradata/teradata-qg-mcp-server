@@ -44,6 +44,20 @@ class BaseClient:
         try:
             response = self.session.request(method, url, **kwargs)
             response.raise_for_status()
+        except requests.exceptions.HTTPError as exc:
+            # Include response body in error message for better debugging
+            error_details = ""
+            try:
+                error_body = response.json()
+                error_details = f"\nAPI Error: {error_body.get('message', error_body)}"
+            except (ValueError, AttributeError):
+                if response.text:
+                    error_details = f"\nAPI Response: {response.text}"
+            
+            self.logger.error("HTTP request failed: %s%s", exc, error_details)
+            raise requests.exceptions.HTTPError(
+                f"{exc}{error_details}", response=response
+            ) from exc
         except requests.exceptions.RequestException as exc:
             self.logger.error("HTTP request failed: %s", exc)
             raise

@@ -21,18 +21,26 @@ def qg_create_foreign_server(
     """
     Create a foreign server.
 
+    ALL PARAMETERS ARE MANDATORY. Ask the user for any missing values.
+
     Args:
-        initiator_admin_user (str): Admin user on initiator system.
-        initiator_admin_password (str): Password of the initiator's admin user.
-        link_id (str): Id of the link to create the foreign server for.
-        version (str): Version of the link (ACTIVE, PENDING). Required.
-        foreign_server_name (str): Name of the foreign server to create. Required.
+        initiator_admin_user (str): [MANDATORY] Admin user on initiator system.
+            Ask the user: "What is the admin username on the initiator system?"
+        initiator_admin_password (str): [MANDATORY] Password of the initiator's admin user.
+            Ask the user: "What is the admin password?"
+        link_id (str): [MANDATORY] Id of the link to create the foreign server for. ID is in UUID format.
+            If the user doesn't know the link ID, suggest using qg_get_links to list all links.
+        version (str): [MANDATORY] Version of the link (ACTIVE, PENDING).
+            Ask the user: "Which version should be used: ACTIVE or PENDING?"
+        foreign_server_name (str): [MANDATORY] Name of the foreign server to create.
+            Ask the user: "What would you like to name the foreign server?"
 
     Returns:
         ResponseType: formatted response with operation results + metadata
     """
     logger.debug(
-        "Tool: qg_create_foreign_server: initiator_admin_user=%s, initiator_admin_password=%s, link_id=%s, version=%s, foreign_server_name=%s",
+        "Tool: qg_create_foreign_server: initiator_admin_user=%s, initiator_admin_password=%s, "
+        "link_id=%s, version=%s, foreign_server_name=%s",
         initiator_admin_user,
         "***" if initiator_admin_password else None,
         link_id,
@@ -60,8 +68,12 @@ def qg_get_create_foreign_server_status(id: str) -> dict[str, Any]:
     """
     Get the status of the CONNECTOR_CFS diagnostic check for foreign server creation.
 
+    MANDATORY PARAMETER: Ask the user for the diagnostic check ID if not provided.
+
     Args:
-        id (str): The diagnostic check ID. ID is in UUID format. e.g., '123e4567-e89b-12d3-a456-426614174000'.
+        id (str): [MANDATORY] The diagnostic check ID. ID is in UUID format.
+            e.g., '123e4567-e89b-12d3-a456-426614174000'
+            Use qg_create_foreign_server to initiate creation and get an ID.
 
     Returns:
         ResponseType: formatted response with operation results + metadata

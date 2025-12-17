@@ -80,3 +80,33 @@ class UserMappingClient(BaseClient):
         if description is not None:
             data["description"] = description
         return self._request("POST", self.BASE_ENDPOINT, json=data)
+
+    def put_user_mapping(
+        self,
+        mapping_id: str,
+        name: str,
+        user_mapping: dict[str, str] | None = None,
+        role_mapping: dict[str, str] | None = None,
+        description: str | None = None,
+    ) -> Any:
+        """Update an existing user mapping by ID.
+
+        Args:
+            mapping_id: The ID of the user mapping to update.
+            name: The name of the user mapping.
+            user_mapping: Optional map of local users to remote users.
+            role_mapping: Optional map of local roles to remote roles.
+            description: Optional description of the user mapping.
+
+        Returns:
+            The updated user mapping data.
+        """
+        data: dict[str, Any] = {"name": name}
+        if user_mapping is not None:
+            data["userMapping"] = user_mapping
+        if role_mapping is not None:
+            data["roleMapping"] = role_mapping
+        if description is not None:
+            data["description"] = description
+        api_endpoint = f"{self.BASE_ENDPOINT}/{mapping_id}"
+        return self._request("PUT", api_endpoint, json=data)

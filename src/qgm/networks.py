@@ -58,7 +58,9 @@ class NetworkClient(BaseClient):
         params = {}
         if extra_info:
             params["extraInfo"] = extra_info
-        return self._request("GET", f"{self.BASE_ENDPOINT}/{id}", params=params if params else None)
+        return self._request(
+            "GET", f"{self.BASE_ENDPOINT}/{id}", params=params if params else None
+        )
 
     def get_network_active(self, id: str) -> dict[str, Any]:
         """Get the active version of a network."""
@@ -106,7 +108,7 @@ class NetworkClient(BaseClient):
             "name": name,
             "connectionType": connection_type,
         }
-        
+
         # Only include optional parameters if they are provided
         if description is not None:
             data["description"] = description
@@ -116,5 +118,133 @@ class NetworkClient(BaseClient):
             data["loadBalancerAddress"] = load_balancer_address
         if tags is not None:
             data["tags"] = tags
-            
+
         return self._request("POST", self.BASE_ENDPOINT, json=data)
+
+    def update_network(
+        self,
+        id: str,
+        name: str,
+        description: str | None = None,
+    ) -> dict[str, Any]:
+        """Update network metadata (PATCH).
+
+        Args:
+            id: The ID of the network wrapper.
+            name: The name of the network (mandatory).
+            description: Optional description.
+
+        Returns:
+            The API response.
+        """
+        data: dict[str, Any] = {"name": name}
+        if self._is_valid_param(description):
+            data["description"] = description
+        return self._request("PATCH", f"{self.BASE_ENDPOINT}/{id}", json=data)
+
+    def update_network_active(self, id: str, version_id: str) -> str:
+        """Activate a pending network version (PATCH with plain text).
+
+        Args:
+            id: The ID of the network wrapper.
+            version_id: The versionId to activate (from pending version).
+
+        Returns:
+            Plain text response confirming the activated versionId.
+        """
+        return self._request(
+            "PATCH",
+            f"{self.BASE_ENDPOINT}/{id}/active",
+            data=version_id,
+            headers={"Content-Type": "text/plain"},
+        )
+
+    def put_network_active(
+        self,
+        id: str,
+        name: str,
+        connection_type: str,
+        description: str | None = None,
+        matching_rules: list[dict[str, Any]] | None = None,
+        load_balancer_address: str | None = None,
+        tags: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        """Replace the active network version (PUT).
+
+        Args:
+            id: The ID of the network wrapper.
+            name: The name of the network (mandatory).
+            connection_type: The type of connection (STANDARD, LOAD_BALANCER, NO_INGRESS).
+            description: Optional description.
+            matching_rules: Optional rules for identifying network interfaces.
+            load_balancer_address: Optional load balancer address.
+            tags: Optional tags.
+
+        Returns:
+            The API response.
+        """
+        data: dict[str, Any] = {
+            "name": name,
+            "connectionType": connection_type,
+            "description": description,
+            "matchingRules": matching_rules,
+            "loadBalancerAddress": load_balancer_address,
+            "tags": tags,
+        }
+        return self._request("PUT", f"{self.BASE_ENDPOINT}/{id}/active", json=data)
+
+    def put_network_pending(
+        self,
+        id: str,
+        name: str,
+        connection_type: str,
+        description: str | None = None,
+        matching_rules: list[dict[str, Any]] | None = None,
+        load_balancer_address: str | None = None,
+        tags: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        """Create or replace a pending network version (PUT).
+
+        Args:
+            id: The ID of the network wrapper.
+            name: The name of the network (mandatory).
+            connection_type: The type of connection (STANDARD, LOAD_BALANCER, NO_INGRESS).
+            description: Optional description.
+            matching_rules: Optional rules for identifying network interfaces.
+            load_balancer_address: Optional load balancer address.
+            tags: Optional tags.
+
+        Returns:
+            The API response.
+        """
+        data: dict[str, Any] = {
+            "name": name,
+            "connectionType": connection_type,
+            "description": description,
+            "matchingRules": matching_rules,
+            "loadBalancerAddress": load_balancer_address,
+            "tags": tags,
+        }
+        return self._request("PUT", f"{self.BASE_ENDPOINT}/{id}/pending", json=data)
+
+    def delete_network_pending(self, id: str) -> dict[str, Any]:
+        """Delete the pending network version.
+
+        Args:
+            id: The ID of the network wrapper.
+
+        Returns:
+            The API response.
+        """
+        return self._request("DELETE", f"{self.BASE_ENDPOINT}/{id}/pending")
+
+    def delete_network_previous(self, id: str) -> dict[str, Any]:
+        """Delete the previous network version.
+
+        Args:
+            id: The ID of the network wrapper.
+
+        Returns:
+            The API response.
+        """
+        return self._request("DELETE", f"{self.BASE_ENDPOINT}/{id}/previous")

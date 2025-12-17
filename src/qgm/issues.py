@@ -104,7 +104,8 @@ class IssueClient(BaseClient):
             severity (str): The severity of the problem (e.g. CRITICAL or WARNING).
             subject_label (str): The localizable label that denotes the subject of the issue.
             message_label (str): The localizable label that denotes the message of the issue.
-            config_version (str): The version of the configuration the issue applies to (e.g. ACTIVE, PENDING, PREVIOUS).
+            config_version (str): The version of the configuration the issue applies to
+                (e.g. ACTIVE, PENDING, PREVIOUS).
             reporter_id (str): The ID of the manager that reported the issue.
             last_alert_time (str | None): The last time an alert was sent for this issue (ISO 8601 format).
             subject_params (list[str] | None): The parameters to substitute into the subject.

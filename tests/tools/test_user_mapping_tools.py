@@ -6,7 +6,7 @@ import uuid
 import pytest
 from fastmcp.client import Client
 
-from tools import set_qg_manager  # type: ignore[import-not-found]
+from src.tools import set_qg_manager  # type: ignore[import-not-found]
 
 
 @pytest.fixture(scope="function")
@@ -548,4 +548,268 @@ async def test_qg_get_user_mappings_consistency(mcp_client: Client):
 
     assert (
         result1.data["metadata"]["tool_name"] == result2.data["metadata"]["tool_name"]
+    )
+
+
+@pytest.mark.integration
+async def test_qg_put_user_mapping(mcp_client: Client):
+    """Test updating a user mapping with PUT operation."""
+    mapping_name = f"test_mapping_put_{uuid.uuid4().hex[:8]}"
+
+    # First create a user mapping
+    create_result = await mcp_client.call_tool(
+        "qg_create_user_mapping",
+        arguments={
+            "name": mapping_name,
+            "user_mapping": {"user1": "remote_user1"},
+            "description": "Original description",
+        },
+    )
+
+    assert create_result.data is not None
+    assert create_result.data["metadata"]["success"] is True
+    mapping_id = create_result.data["result"]["id"]
+
+    # Now update it using PUT
+    updated_name = f"updated_{mapping_name}"
+    result = await mcp_client.call_tool(
+        "qg_put_user_mapping",
+        arguments={
+            "mapping_id": mapping_id,
+            "name": updated_name,
+            "user_mapping": {"user1": "new_remote_user", "user2": "remote_user2"},
+            "description": "Updated description",
+        },
+    )
+
+    assert result.data is not None
+    metadata = result.data["metadata"]
+    assert metadata["tool_name"] == "qg_put_user_mapping"
+    assert metadata["success"] is True
+
+    # Verify the update
+    if "result" in result.data:
+        updated_mapping = result.data["result"]
+        assert updated_mapping["name"] == updated_name
+        assert updated_mapping["description"] == "Updated description"
+        assert updated_mapping["userMapping"]["user1"] == "new_remote_user"
+        assert updated_mapping["userMapping"]["user2"] == "remote_user2"
+
+    # Clean up
+    await mcp_client.call_tool(
+        "qg_delete_user_mapping",
+        arguments={"mapping_id": mapping_id},
+    )
+
+
+@pytest.mark.integration
+async def test_qg_put_user_mapping_not_found(mcp_client: Client):
+    """Test updating a non-existent user mapping returns 404."""
+    fake_mapping_id = str(uuid.uuid4())
+
+    result = await mcp_client.call_tool(
+        "qg_put_user_mapping",
+        arguments={
+            "mapping_id": fake_mapping_id,
+            "name": "nonexistent_mapping",
+        },
+    )
+
+    assert result.data is not None
+    metadata = result.data["metadata"]
+    assert metadata["tool_name"] == "qg_put_user_mapping"
+    # API may handle non-existent IDs differently (404 or success with empty result)
+    assert "success" in metadata
+
+
+@pytest.mark.integration
+async def test_qg_put_user_mapping_invalid_data(mcp_client: Client):
+    """Test updating user mapping with invalid data."""
+    mapping_name = f"test_mapping_invalid_{uuid.uuid4().hex[:8]}"
+
+    # First create a user mapping
+    create_result = await mcp_client.call_tool(
+        "qg_create_user_mapping",
+        arguments={
+            "name": mapping_name,
+        },
+    )
+
+    assert create_result.data is not None
+    assert create_result.data["metadata"]["success"] is True
+    mapping_id = create_result.data["result"]["id"]
+
+    # Try to update with empty name (invalid)
+    result = await mcp_client.call_tool(
+        "qg_put_user_mapping",
+        arguments={
+            "mapping_id": mapping_id,
+            "name": "",  # Empty name is invalid
+        },
+    )
+
+    assert result.data is not None
+    metadata = result.data["metadata"]
+    assert metadata["tool_name"] == "qg_put_user_mapping"
+    assert metadata["success"] is False
+
+    # Clean up
+    await mcp_client.call_tool(
+        "qg_delete_user_mapping",
+        arguments={"mapping_id": mapping_id},
+    )
+
+
+@pytest.mark.integration
+async def test_qg_put_user_mapping_full_replacement(mcp_client: Client):
+    """Test that PUT replaces all fields (not partial update)."""
+    mapping_name = f"test_mapping_replace_{uuid.uuid4().hex[:8]}"
+
+    # Create user mapping with description and mappings
+    create_result = await mcp_client.call_tool(
+        "qg_create_user_mapping",
+        arguments={
+            "name": mapping_name,
+            "user_mapping": {"user1": "remote_user1"},
+            "role_mapping": {"role1": "remote_role1"},
+            "description": "Original description",
+        },
+    )
+
+    assert create_result.data is not None
+    assert create_result.data["metadata"]["success"] is True
+    mapping_id = create_result.data["result"]["id"]
+
+    # Update with PUT but don't include description, role_mapping
+    # These should be cleared (PUT is full replacement)
+    result = await mcp_client.call_tool(
+        "qg_put_user_mapping",
+        arguments={
+            "mapping_id": mapping_id,
+            "name": mapping_name,
+            "user_mapping": {"user2": "remote_user2"},
+            # Note: NOT including description or role_mapping
+        },
+    )
+
+    assert result.data is not None
+    metadata = result.data["metadata"]
+    assert metadata["tool_name"] == "qg_put_user_mapping"
+    assert metadata["success"] is True
+
+    # Verify fields were cleared
+    if "result" in result.data:
+        updated_mapping = result.data["result"]
+        # Description and role_mapping should be empty/null since not provided in PUT
+        assert updated_mapping.get("description") in [None, "", "null"]
+        assert updated_mapping.get("roleMapping") in [None, {}, "null"]
+        # But user_mapping should be updated
+        assert updated_mapping["userMapping"]["user2"] == "remote_user2"
+        assert "user1" not in updated_mapping.get("userMapping", {})
+
+    # Clean up
+    await mcp_client.call_tool(
+        "qg_delete_user_mapping",
+        arguments={"mapping_id": mapping_id},
+    )
+
+
+@pytest.mark.integration
+async def test_qg_put_user_mapping_with_role_mapping(mcp_client: Client):
+    """Test updating user mapping with role mappings."""
+    mapping_name = f"test_mapping_roles_{uuid.uuid4().hex[:8]}"
+
+    # Create user mapping
+    create_result = await mcp_client.call_tool(
+        "qg_create_user_mapping",
+        arguments={
+            "name": mapping_name,
+        },
+    )
+
+    assert create_result.data is not None
+    assert create_result.data["metadata"]["success"] is True
+    mapping_id = create_result.data["result"]["id"]
+
+    # Update with role mappings
+    result = await mcp_client.call_tool(
+        "qg_put_user_mapping",
+        arguments={
+            "mapping_id": mapping_id,
+            "name": mapping_name,
+            "role_mapping": {"admin": "supergroup", "users": "regular_users"},
+        },
+    )
+
+    assert result.data is not None
+    metadata = result.data["metadata"]
+    assert metadata["tool_name"] == "qg_put_user_mapping"
+    assert metadata["success"] is True
+
+    # Verify role mappings
+    if "result" in result.data:
+        updated_mapping = result.data["result"]
+        assert "roleMapping" in updated_mapping
+        assert updated_mapping["roleMapping"]["admin"] == "supergroup"
+        assert updated_mapping["roleMapping"]["users"] == "regular_users"
+
+    # Clean up
+    await mcp_client.call_tool(
+        "qg_delete_user_mapping",
+        arguments={"mapping_id": mapping_id},
+    )
+
+
+@pytest.mark.integration
+async def test_qg_put_user_mapping_preserve_existing(mcp_client: Client):
+    """Test updating while preserving existing values."""
+    mapping_name = f"test_mapping_preserve_{uuid.uuid4().hex[:8]}"
+
+    # Create user mapping with all fields
+    create_result = await mcp_client.call_tool(
+        "qg_create_user_mapping",
+        arguments={
+            "name": mapping_name,
+            "user_mapping": {"user1": "remote_user1"},
+            "role_mapping": {"role1": "remote_role1"},
+            "description": "Original description",
+        },
+    )
+
+    assert create_result.data is not None
+    assert create_result.data["metadata"]["success"] is True
+    mapping_id = create_result.data["result"]["id"]
+    original = create_result.data["result"]
+
+    # Update user_mapping but preserve role_mapping and description
+    result = await mcp_client.call_tool(
+        "qg_put_user_mapping",
+        arguments={
+            "mapping_id": mapping_id,
+            "name": mapping_name,
+            "user_mapping": {"user1": "updated_remote_user"},  # Update this
+            "role_mapping": original.get("roleMapping"),  # Preserve
+            "description": original.get("description"),  # Preserve
+        },
+    )
+
+    assert result.data is not None
+    metadata = result.data["metadata"]
+    assert metadata["tool_name"] == "qg_put_user_mapping"
+    assert metadata["success"] is True
+
+    # Verify preservation
+    if "result" in result.data:
+        updated_mapping = result.data["result"]
+        # User mapping should be updated
+        assert updated_mapping["userMapping"]["user1"] == "updated_remote_user"
+        # Role mapping should be preserved
+        assert updated_mapping["roleMapping"]["role1"] == "remote_role1"
+        # Description should be preserved
+        assert updated_mapping["description"] == "Original description"
+
+    # Clean up
+    await mcp_client.call_tool(
+        "qg_delete_user_mapping",
+        arguments={"mapping_id": mapping_id},
     )

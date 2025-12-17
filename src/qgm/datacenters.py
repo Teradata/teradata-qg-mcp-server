@@ -61,6 +61,32 @@ class DataCenterClient(BaseClient):
             data["tags"] = tags
         return self._request("POST", self.BASE_ENDPOINT, json=data)
 
+    def update_datacenter(
+        self,
+        id: str,
+        name: str,
+        description: str | None = None,
+        tags: dict[str, str] | None = None,
+    ) -> Any:
+        """Update a data center using PUT (full replacement).
+
+        Args:
+            id: The ID of the data center to update.
+            name: The name of the data center.
+            description: Optional description of the data center.
+            tags: Optional tags mapping.
+
+        Returns:
+            The API response parsed as JSON.
+        """
+        data: dict[str, Any] = {"name": name}
+        if description is not None:
+            data["description"] = description
+        if tags is not None:
+            data["tags"] = tags
+        api_endpoint = f"{self.BASE_ENDPOINT}/{id}"
+        return self._request("PUT", api_endpoint, json=data)
+
     def delete_datacenter(self, id: str) -> Any:
         """Delete a data center by ID.
 

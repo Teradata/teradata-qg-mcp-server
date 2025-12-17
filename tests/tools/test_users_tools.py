@@ -13,17 +13,17 @@ from tools import set_qg_manager  # type: ignore[import-not-found]
 async def test_user(mcp_client: Client):
     """
     Create a test user for integration tests.
-    
+
     This fixture creates a user that can be used across test cases.
     The user is cleaned up after the test completes.
-    
+
     Returns:
         dict: Contains 'username' and 'password', and 'created' flag
     """
     username = f"test_user_pytest_{uuid.uuid4().hex[:8]}"
     # Password must be 14+ chars with special symbols and numbers
     password = f"TestPass123@{uuid.uuid4().hex[:8]}!"
-    
+
     # Create test user
     result = await mcp_client.call_tool(
         "qg_create_user",
@@ -33,21 +33,21 @@ async def test_user(mcp_client: Client):
             "description": "Test user created by pytest fixture",
         },
     )
-    
+
     user_data = {
         "username": username,
         "password": password,
         "created": False,
     }
-    
+
     if result.data and result.data.get("metadata", {}).get("success"):
         user_data["created"] = True
         print(f"\n✓ Created test user: {username}")
     else:
         print(f"\n⚠ Failed to create test user (API may not support user creation)")
-    
+
     yield user_data
-    
+
     # Cleanup - delete the test user only if it was created
     if user_data.get("created"):
         try:
@@ -107,9 +107,9 @@ async def test_qg_get_users_contains_created_user(mcp_client: Client, test_user)
     """Test that get_users returns a created user."""
     if not test_user.get("created"):
         pytest.skip("Test user was not created successfully (API limitation)")
-    
+
     username = test_user["username"]
-    
+
     result = await mcp_client.call_tool(
         "qg_get_users",
         arguments={},
@@ -119,7 +119,7 @@ async def test_qg_get_users_contains_created_user(mcp_client: Client, test_user)
     metadata = result.data["metadata"]
     assert metadata["tool_name"] == "qg_get_users"
     assert metadata["success"] is True
-    
+
     # Should find the test user
     if "result" in result.data:
         result_data = result.data["result"]
@@ -136,9 +136,9 @@ async def test_qg_get_user_by_username_existing(mcp_client: Client, test_user):
     """Test getting an existing user by username."""
     if not test_user.get("created"):
         pytest.skip("Test user was not created successfully (API limitation)")
-    
+
     username = test_user["username"]
-    
+
     result = await mcp_client.call_tool(
         "qg_get_user_by_username",
         arguments={"username": username},
@@ -148,7 +148,7 @@ async def test_qg_get_user_by_username_existing(mcp_client: Client, test_user):
     metadata = result.data["metadata"]
     assert metadata["tool_name"] == "qg_get_user_by_username"
     assert metadata["success"] is True
-    
+
     # Should return the user details
     if "result" in result.data:
         result_data = result.data["result"]
@@ -537,7 +537,9 @@ async def test_qg_get_users_consistency(mcp_client: Client):
     assert "metadata" in result1.data
     assert "metadata" in result2.data
 
-    assert result1.data["metadata"]["tool_name"] == result2.data["metadata"]["tool_name"]
+    assert (
+        result1.data["metadata"]["tool_name"] == result2.data["metadata"]["tool_name"]
+    )
 
 
 @pytest.mark.integration
@@ -578,7 +580,9 @@ async def test_qg_user_lifecycle(mcp_client: Client):
 
     assert list_result.data is not None
     assert list_result.data["metadata"]["success"] is True
-    usernames = [u.get("username") for u in list_result.data["result"] if isinstance(u, dict)]
+    usernames = [
+        u.get("username") for u in list_result.data["result"] if isinstance(u, dict)
+    ]
     assert username in usernames
 
     # Delete user
@@ -599,3 +603,149 @@ async def test_qg_user_lifecycle(mcp_client: Client):
     assert get_after_delete.data is not None
     # Should not find the deleted user
     assert get_after_delete.data["metadata"]["success"] is False
+
+
+# Tests for qg_update_user
+
+
+@pytest.mark.integration
+async def test_qg_update_user_description(mcp_client: Client, test_user):
+    """Test updating a user's description."""
+    if not test_user.get("created"):
+        pytest.skip("Test user was not created successfully (API limitation)")
+
+    username = test_user["username"]
+    password = test_user["password"]
+    new_description = "Updated description via pytest"
+
+    # Update the user description (password is required by API)
+    result = await mcp_client.call_tool(
+        "qg_update_user",
+        arguments={
+            "username": username,
+            "password": password,
+            "description": new_description,
+        },
+    )
+
+    assert result.data is not None
+    metadata = result.data["metadata"]
+    assert metadata["tool_name"] == "qg_update_user"
+    assert metadata["success"] is True
+
+    # Verify the update by fetching the user
+    get_result = await mcp_client.call_tool(
+        "qg_get_user_by_username",
+        arguments={"username": username},
+    )
+
+    assert get_result.data is not None
+    assert get_result.data["metadata"]["success"] is True
+    assert get_result.data["result"]["description"] == new_description
+
+
+@pytest.mark.integration
+async def test_qg_update_user_password(mcp_client: Client, test_user):
+    """Test updating a user's password."""
+    if not test_user.get("created"):
+        pytest.skip("Test user was not created successfully (API limitation)")
+
+    username = test_user["username"]
+    new_password = f"NewPass456@{uuid.uuid4().hex[:8]}!"
+
+    # Update the user password
+    result = await mcp_client.call_tool(
+        "qg_update_user",
+        arguments={
+            "username": username,
+            "password": new_password,
+        },
+    )
+
+    assert result.data is not None
+    metadata = result.data["metadata"]
+    assert metadata["tool_name"] == "qg_update_user"
+    assert metadata["success"] is True
+
+
+@pytest.mark.integration
+async def test_qg_update_user_both_fields(mcp_client: Client, test_user):
+    """Test updating both password and description."""
+    if not test_user.get("created"):
+        pytest.skip("Test user was not created successfully (API limitation)")
+
+    username = test_user["username"]
+    new_password = f"BothUpdate789@{uuid.uuid4().hex[:8]}!"
+    new_description = "Updated both fields via pytest"
+
+    # Update both fields
+    result = await mcp_client.call_tool(
+        "qg_update_user",
+        arguments={
+            "username": username,
+            "password": new_password,
+            "description": new_description,
+        },
+    )
+
+    assert result.data is not None
+    metadata = result.data["metadata"]
+    assert metadata["tool_name"] == "qg_update_user"
+    assert metadata["success"] is True
+
+    # Verify the update by fetching the user
+    get_result = await mcp_client.call_tool(
+        "qg_get_user_by_username",
+        arguments={"username": username},
+    )
+
+    assert get_result.data is not None
+    assert get_result.data["metadata"]["success"] is True
+    assert get_result.data["result"]["description"] == new_description
+
+
+@pytest.mark.integration
+async def test_qg_update_user_nonexistent(mcp_client: Client):
+    """Test updating a non-existent user."""
+    username = f"nonexistent_user_{uuid.uuid4().hex[:8]}"
+    password = f"TestPass123@{uuid.uuid4().hex[:8]}!"
+
+    result = await mcp_client.call_tool(
+        "qg_update_user",
+        arguments={
+            "username": username,
+            "password": password,
+            "description": "This should fail",
+        },
+    )
+
+    assert result.data is not None
+    metadata = result.data["metadata"]
+    assert metadata["tool_name"] == "qg_update_user"
+    # Should fail for non-existent user
+    assert metadata["success"] is False
+
+
+@pytest.mark.integration
+async def test_qg_update_user_password_only(mcp_client: Client, test_user):
+    """Test calling update_user with only password (no description)."""
+    if not test_user.get("created"):
+        pytest.skip("Test user was not created successfully (API limitation)")
+
+    username = test_user["username"]
+    password = test_user["password"]
+
+    # Call update with only password (no description change)
+    result = await mcp_client.call_tool(
+        "qg_update_user",
+        arguments={
+            "username": username,
+            "password": password,
+        },
+    )
+
+    assert result.data is not None
+    metadata = result.data["metadata"]
+    assert metadata["tool_name"] == "qg_update_user"
+    # Should succeed with password only
+    assert metadata["success"] is True

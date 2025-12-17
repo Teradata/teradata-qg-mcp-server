@@ -14,7 +14,9 @@ class BridgeClient(BaseClient):
 
     BASE_ENDPOINT = "/api/config/bridges"
 
-    def get_bridges(self, filter_by_system_id: str | None = None, filter_by_name: str | None = None) -> Any:
+    def get_bridges(
+        self, filter_by_system_id: str | None = None, filter_by_name: str | None = None
+    ) -> Any:
         """
         Retrieve the list of QueryGrid bridge objects from the API.
 
@@ -89,3 +91,54 @@ class BridgeClient(BaseClient):
         """
         api_endpoint = f"{self.BASE_ENDPOINT}/{id}"
         return self._request("DELETE", api_endpoint)
+
+    def update_bridge(
+        self,
+        id: str,
+        name: str | None = None,
+        system_id: str | None = None,
+        node_ids: list[str] | None = None,
+        description: str | None = None,
+    ) -> Any:
+        """Update an existing bridge in QueryGrid Manager.
+
+        Note: The QueryGrid API requires name and systemId fields to be present in PUT requests.
+        If not provided, the method will fetch the current bridge to get the existing values.
+
+        Args:
+            id: The ID of the bridge to update.
+            name: Optional new name for the bridge.
+            system_id: Optional new system ID associated with the bridge.
+            node_ids: Optional new list of node IDs from the specified system to act as a bridge.
+            description: Optional new description of the bridge.
+
+        Returns:
+            The API response.
+        """
+        api_endpoint = f"{self.BASE_ENDPOINT}/{id}"
+        
+        # Fetch current bridge if we need any of the required fields
+        if name is None or system_id is None:
+            current_bridge = self.get_bridge_by_id(id)
+            if name is None:
+                name = current_bridge.get("name")
+                if name is None:
+                    raise ValueError(f"Bridge {id} does not have a name and none was provided")
+            if system_id is None:
+                system_id = current_bridge.get("systemId")
+                if system_id is None:
+                    raise ValueError(f"Bridge {id} does not have a systemId and none was provided")
+        
+        # Build request with required fields
+        data: dict[str, Any] = {
+            "name": name,
+            "systemId": system_id,
+        }
+        
+        # Add optional fields only if explicitly provided
+        if node_ids is not None:
+            data["nodeIds"] = node_ids
+        if description is not None:
+            data["description"] = description
+            
+        return self._request("PUT", api_endpoint, json=data)

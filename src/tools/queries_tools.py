@@ -23,15 +23,17 @@ def qg_get_query_summary(
     Get summaries of all the queries run using QueryGrid. Query summaries can be filtered based on various criteria.
     Optional arguments can be ignored if not needed.
 
+    ALL PARAMETERS ARE OPTIONAL. If the user does not specify filters, retrieve all query summaries.
+
     Args:
-        last_modified_after (str | None): [Optional] Return all query summary that have been modified since
+        last_modified_after (str | None): [OPTIONAL] Return all query summary that have been modified since
             the time provided. Time should be provided in ISO8601 format. e.g., '2023-01-01T00:00:00Z'
-        completed (bool): Include completed queries. Values are 'true' or 'false'.
-        query_text_phrase (str | None): [Optional] Only return queries that contain the supplied phrase in the
+        completed (bool): [OPTIONAL] Include completed queries. Values are 'true' or 'false'.
+        query_text_phrase (str | None): [OPTIONAL] Only return queries that contain the supplied phrase in the
             query text.
-        query_ref_ids (str | None): [Optional] Filter by comma separated query reference IDs.
+        query_ref_ids (str | None): [OPTIONAL] Filter by comma separated query reference IDs.
             IDs are in UUID format. e.g., '123e4567-e89b-12d3-a456-426614174000,223e4567-e89b-12d3-a456-426614174001'.
-        initiator_query_id (str | None): [Optional] Filter by initiator query ID.
+        initiator_query_id (str | None): [OPTIONAL] Filter by initiator query ID.
             ID is in UUID format. e.g., '123e4567-e89b-12d3-a456-426614174000'.
     Returns:
         ResponseType: formatted response with operation results + metadata
@@ -68,8 +70,12 @@ def qg_get_query_by_id(
     """
     Get a specific QueryGrid query by ID.
 
+    MANDATORY PARAMETER: Ask the user for the query ID if not provided.
+
     Args:
-        id (str): The ID of the query to retrieve. ID is in UUID format. e.g., '123e4567-e89b-12d3-a456-426614174000'.
+        id (str): [MANDATORY] The ID of the query to retrieve. ID is in UUID format.
+            e.g., '123e4567-e89b-12d3-a456-426614174000'.
+            If the user doesn't know the ID, suggest using qg_get_query_summary to list all queries.
 
     Returns:
         ResponseType: formatted response with operation results + metadata
@@ -92,8 +98,12 @@ def qg_get_query_details(
     """
     Get detailed information for a specific QueryGrid query.
 
+    MANDATORY PARAMETER: Ask the user for the query ID if not provided.
+
     Args:
-        id (str): The ID of the query to retrieve details for
+        id (str): [MANDATORY] The ID of the query to retrieve details for. ID is in UUID format.
+            e.g., '123e4567-e89b-12d3-a456-426614174000'.
+            If the user doesn't know the ID, suggest using qg_get_query_summary to list all queries.
 
     Returns:
         ResponseType: formatted response with operation results + metadata

@@ -17,6 +17,8 @@ def qg_get_api_info() -> dict[str, Any]:
     """
     Get API information including version and features.
 
+    NO PARAMETERS REQUIRED.
+
     Returns:
         ResponseType: formatted response with operation results + metadata
     """
