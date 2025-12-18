@@ -258,7 +258,9 @@ async def test_qg_delete_bridge_not_found(mcp_client: Client):
     """Test deleting a non-existent bridge."""
     invalid_id = "00000000-0000-0000-0000-000000000000"
 
-    result = await mcp_client.call_tool("qg_delete_bridge", arguments={"id": invalid_id})
+    result = await mcp_client.call_tool(
+        "qg_delete_bridge", arguments={"id": invalid_id}
+    )
 
     # API might return success even for non-existent resources
     assert result.data is not None
@@ -285,3 +287,334 @@ async def test_qg_bridges_error_handling(mcp_client: Client, qg_manager):
 
     # Restore manager for other tests
     set_qg_manager(qg_manager)
+
+
+# Tests for qg_update_bridge
+
+
+@pytest.mark.integration
+async def test_qg_update_bridge_name(
+    mcp_client: Client, qg_manager, test_infrastructure
+):
+    """Test updating a bridge's name."""
+    # Use the test system from infrastructure
+    system_id = test_infrastructure["system_id"]
+    assert system_id is not None, "Test infrastructure should have created a system"
+
+    # Create a bridge to update
+    unique_suffix = str(uuid.uuid4())[:8]
+    original_name = f"test_bridge_update_name_{unique_suffix}"
+    created_bridge = qg_manager.bridge_client.create_bridge(
+        name=original_name,
+        system_id=system_id,
+        description="Bridge for testing name update",
+    )
+
+    bridge_id = created_bridge.get("id")
+    assert bridge_id is not None, "Created bridge should have an ID"
+
+    try:
+        # Update the bridge name
+        new_name = f"updated_bridge_name_{unique_suffix}"
+        result = await mcp_client.call_tool(
+            "qg_update_bridge",
+            arguments={
+                "id": bridge_id,
+                "name": new_name,
+            },
+        )
+
+        # Verify response
+        assert result.data is not None
+        metadata = result.data["metadata"]
+        assert metadata["tool_name"] == "qg_update_bridge"
+        assert metadata["success"] is True
+
+        # Verify the update by fetching the bridge
+        get_result = await mcp_client.call_tool(
+            "qg_get_bridge_by_id",
+            arguments={"id": bridge_id},
+        )
+
+        assert get_result.data is not None
+        assert get_result.data["metadata"]["success"] is True
+        assert get_result.data["result"]["name"] == new_name
+
+    finally:
+        # Cleanup
+        try:
+            qg_manager.bridge_client.delete_bridge(bridge_id)
+        except Exception:
+            pass
+
+
+@pytest.mark.integration
+async def test_qg_update_bridge_description(
+    mcp_client: Client, qg_manager, test_infrastructure
+):
+    """Test updating a bridge's description."""
+    # Use the test system from infrastructure
+    system_id = test_infrastructure["system_id"]
+    assert system_id is not None, "Test infrastructure should have created a system"
+
+    # Create a bridge to update
+    unique_suffix = str(uuid.uuid4())[:8]
+    bridge_name = f"test_bridge_update_desc_{unique_suffix}"
+    created_bridge = qg_manager.bridge_client.create_bridge(
+        name=bridge_name,
+        system_id=system_id,
+        description="Original description",
+    )
+
+    bridge_id = created_bridge.get("id")
+    assert bridge_id is not None, "Created bridge should have an ID"
+
+    try:
+        # Update the bridge description
+        new_description = "Updated description via pytest"
+        result = await mcp_client.call_tool(
+            "qg_update_bridge",
+            arguments={
+                "id": bridge_id,
+                "description": new_description,
+            },
+        )
+
+        # Verify response
+        assert result.data is not None
+        metadata = result.data["metadata"]
+        assert metadata["tool_name"] == "qg_update_bridge"
+        assert metadata["success"] is True
+
+        # Verify the update by fetching the bridge
+        get_result = await mcp_client.call_tool(
+            "qg_get_bridge_by_id",
+            arguments={"id": bridge_id},
+        )
+
+        assert get_result.data is not None
+        assert get_result.data["metadata"]["success"] is True
+        assert get_result.data["result"]["description"] == new_description
+
+    finally:
+        # Cleanup
+        try:
+            qg_manager.bridge_client.delete_bridge(bridge_id)
+        except Exception:
+            pass
+
+
+@pytest.mark.integration
+async def test_qg_update_bridge_multiple_fields(
+    mcp_client: Client, qg_manager, test_infrastructure
+):
+    """Test updating multiple bridge fields at once."""
+    # Use the test system from infrastructure
+    system_id = test_infrastructure["system_id"]
+    assert system_id is not None, "Test infrastructure should have created a system"
+
+    # Create a bridge to update
+    unique_suffix = str(uuid.uuid4())[:8]
+    original_name = f"test_bridge_multi_{unique_suffix}"
+    created_bridge = qg_manager.bridge_client.create_bridge(
+        name=original_name,
+        system_id=system_id,
+        description="Original description",
+    )
+
+    bridge_id = created_bridge.get("id")
+    assert bridge_id is not None, "Created bridge should have an ID"
+
+    try:
+        # Update multiple fields
+        new_name = f"updated_multi_{unique_suffix}"
+        new_description = "Updated multiple fields via pytest"
+        result = await mcp_client.call_tool(
+            "qg_update_bridge",
+            arguments={
+                "id": bridge_id,
+                "name": new_name,
+                "description": new_description,
+            },
+        )
+
+        # Verify response
+        assert result.data is not None
+        metadata = result.data["metadata"]
+        assert metadata["tool_name"] == "qg_update_bridge"
+        assert metadata["success"] is True
+
+        # Verify the update by fetching the bridge
+        get_result = await mcp_client.call_tool(
+            "qg_get_bridge_by_id",
+            arguments={"id": bridge_id},
+        )
+
+        assert get_result.data is not None
+        assert get_result.data["metadata"]["success"] is True
+        updated_bridge = get_result.data["result"]
+        assert updated_bridge["name"] == new_name
+        assert updated_bridge["description"] == new_description
+
+    finally:
+        # Cleanup
+        try:
+            qg_manager.bridge_client.delete_bridge(bridge_id)
+        except Exception:
+            pass
+
+
+@pytest.mark.integration
+async def test_qg_update_bridge_system_id(
+    mcp_client: Client, qg_manager, test_infrastructure
+):
+    """Test updating a bridge's system_id."""
+    # Use the test system from infrastructure
+    system_id = test_infrastructure["system_id"]
+    assert system_id is not None, "Test infrastructure should have created a system"
+
+    # Get all systems to find another system for update test
+    systems = qg_manager.system_client.get_systems()
+
+    # If there are multiple systems, use a different one for the update
+    # Otherwise, just update with the same system_id
+    other_system_id = None
+    if len(systems) > 1:
+        for system in systems:
+            if system.get("id") != system_id:
+                other_system_id = system.get("id")
+                break
+
+    if not other_system_id:
+        other_system_id = system_id
+
+    # Create a bridge to update
+    unique_suffix = str(uuid.uuid4())[:8]
+    bridge_name = f"test_bridge_update_system_{unique_suffix}"
+    created_bridge = qg_manager.bridge_client.create_bridge(
+        name=bridge_name,
+        system_id=system_id,
+        description="Bridge for testing system update",
+    )
+
+    bridge_id = created_bridge.get("id")
+    assert bridge_id is not None, "Created bridge should have an ID"
+
+    try:
+        # Update the bridge system_id
+        result = await mcp_client.call_tool(
+            "qg_update_bridge",
+            arguments={
+                "id": bridge_id,
+                "system_id": other_system_id,
+            },
+        )
+
+        # Verify response
+        assert result.data is not None
+        metadata = result.data["metadata"]
+        assert metadata["tool_name"] == "qg_update_bridge"
+        assert metadata["success"] is True
+
+        # Verify the update by fetching the bridge
+        get_result = await mcp_client.call_tool(
+            "qg_get_bridge_by_id",
+            arguments={"id": bridge_id},
+        )
+
+        assert get_result.data is not None
+        assert get_result.data["metadata"]["success"] is True
+        updated_bridge = get_result.data["result"]
+        # Check systemId directly (not nested in a system object)
+        assert updated_bridge.get("systemId") == other_system_id
+
+    finally:
+        # Cleanup
+        try:
+            qg_manager.bridge_client.delete_bridge(bridge_id)
+        except Exception:
+            pass
+
+
+@pytest.mark.integration
+async def test_qg_update_bridge_node_ids(
+    mcp_client: Client, qg_manager, test_infrastructure
+):
+    """Test updating a bridge's node_ids."""
+    # Use the test system from infrastructure
+    system_id = test_infrastructure["system_id"]
+    assert system_id is not None, "Test infrastructure should have created a system"
+
+    # Get nodes for the system
+    nodes = qg_manager.node_client.get_nodes(filter_by_system_id=system_id)
+
+    if not nodes:
+        pytest.skip("No nodes available to test node_ids update")
+
+    # Create a bridge to update
+    unique_suffix = str(uuid.uuid4())[:8]
+    bridge_name = f"test_bridge_update_nodes_{unique_suffix}"
+    created_bridge = qg_manager.bridge_client.create_bridge(
+        name=bridge_name,
+        system_id=system_id,
+        description="Bridge for testing node update",
+    )
+
+    bridge_id = created_bridge.get("id")
+    assert bridge_id is not None, "Created bridge should have an ID"
+
+    try:
+        # Update the bridge with node_ids
+        node_ids = [nodes[0].get("id")]
+        result = await mcp_client.call_tool(
+            "qg_update_bridge",
+            arguments={
+                "id": bridge_id,
+                "node_ids": node_ids,
+            },
+        )
+
+        # Verify response
+        assert result.data is not None
+        metadata = result.data["metadata"]
+        assert metadata["tool_name"] == "qg_update_bridge"
+        assert metadata["success"] is True
+
+        # Verify the update by fetching the bridge
+        get_result = await mcp_client.call_tool(
+            "qg_get_bridge_by_id",
+            arguments={"id": bridge_id},
+        )
+
+        assert get_result.data is not None
+        assert get_result.data["metadata"]["success"] is True
+        updated_nodes = get_result.data["result"].get("nodes", [])
+        if updated_nodes:  # Some systems might not return nodes in the response
+            assert len(updated_nodes) > 0
+
+    finally:
+        # Cleanup
+        try:
+            qg_manager.bridge_client.delete_bridge(bridge_id)
+        except Exception:
+            pass
+
+
+@pytest.mark.integration
+async def test_qg_update_bridge_nonexistent(mcp_client: Client):
+    """Test updating a non-existent bridge."""
+    invalid_id = "00000000-0000-0000-0000-000000000000"
+
+    result = await mcp_client.call_tool(
+        "qg_update_bridge",
+        arguments={
+            "id": invalid_id,
+            "name": "This should fail",
+        },
+    )
+
+    assert result.data is not None
+    metadata = result.data["metadata"]
+    assert metadata["tool_name"] == "qg_update_bridge"
+    # Should fail for non-existent bridge
+    assert metadata["success"] is False

@@ -28,22 +28,24 @@ def qg_get_nodes(
     criteria such as system ID, fabric ID, connector ID, or node name. Leave optional parameters unset
     if no filtering is required.
 
+    ALL PARAMETERS ARE OPTIONAL. If the user does not specify filters, retrieve all nodes.
+
     Args:
-        filter_by_system_id (str | None): [Optional] Filter nodes by system ID. ID is in UUID format.
+        filter_by_system_id (str | None): [OPTIONAL] Filter nodes by system ID. ID is in UUID format.
             e.g., '123e4567-e89b-12d3-a456-426614174000'.
-        filter_by_bridge_id (str | None): [Optional] Filter nodes by bridge ID. ID is in UUID format.
+        filter_by_bridge_id (str | None): [OPTIONAL] Filter nodes by bridge ID. ID is in UUID format.
             e.g., '123e4567-e89b-12d3-a456-426614174000'.
-        filter_by_fabric_id (str | None): [Optional] Filter nodes by fabric ID. ID is in UUID format.
+        filter_by_fabric_id (str | None): [OPTIONAL] Filter nodes by fabric ID. ID is in UUID format.
             e.g., '123e4567-e89b-12d3-a456-426614174000'.
-        filter_by_connector_id (str | None): [Optional] Filter nodes by connector ID. ID is in UUID format.
+        filter_by_connector_id (str | None): [OPTIONAL] Filter nodes by connector ID. ID is in UUID format.
             e.g., '123e4567-e89b-12d3-a456-426614174000'.
-        extra_info (bool): Include extra information. Values are boolean True/False, not string.
-        fabric_version (str | None): [Optional] Filter nodes by fabric version. e.g., "03.10.00.01".
-        connector_version (str | None): [Optional] Filter nodes by connector version. e.g., "03.10.00.01".
-        drivers (str | None): [Optional] Works with filter_by_connector_id to make status relative to the
+        extra_info (bool): [OPTIONAL] Include extra information. Values are boolean True/False, not string.
+        fabric_version (str | None): [OPTIONAL] Filter nodes by fabric version. e.g., "03.10.00.01".
+        connector_version (str | None): [OPTIONAL] Filter nodes by connector version. e.g., "03.10.00.01".
+        drivers (str | None): [OPTIONAL] Works with filter_by_connector_id to make status relative to the
             drivers for the specified connector. Values can be True/False.
-        details (bool): Include detailed information
-        filter_by_name (str | None): [Optional] Filter nodes by name. The name can be any sequence of characters
+        details (bool): [OPTIONAL] Include detailed information
+        filter_by_name (str | None): [OPTIONAL] Filter nodes by name. The name can be any sequence of characters
             representing the node's name, such as 'Node1'.
 
     Returns:
@@ -76,8 +78,12 @@ def qg_get_node_by_id(id: str) -> dict[str, Any]:
     """
     Get details of a specific QueryGrid node by ID.
 
+    MANDATORY PARAMETER: Ask the user for the node ID if not provided.
+
     Args:
-        id (str): The ID of the node to retrieve. ID is in UUID format. e.g., '123e4567-e89b-12d3-a456-426614174000'.
+        id (str): [MANDATORY] The ID of the node to retrieve. ID is in UUID format.
+            e.g., '123e4567-e89b-12d3-a456-426614174000'.
+            If the user doesn't know the ID, suggest using qg_get_nodes to list all nodes.
 
     Returns:
         ResponseType: formatted response with operation results + metadata
@@ -98,8 +104,12 @@ def qg_get_node_heartbeat_by_id(id: str) -> dict[str, Any]:
     """
     Get the latest heartbeat sent by a specific QueryGrid node by ID.
 
+    MANDATORY PARAMETER: Ask the user for the node ID if not provided.
+
     Args:
-        id (str): The ID of the node to retrieve. ID is in UUID format. e.g., '123e4567-e89b-12d3-a456-426614174000'.
+        id (str): [MANDATORY] The ID of the node to retrieve. ID is in UUID format.
+            e.g., '123e4567-e89b-12d3-a456-426614174000'.
+            If the user doesn't know the ID, suggest using qg_get_nodes to list all nodes.
 
     Returns:
         ResponseType: formatted response with operation results + metadata
@@ -120,11 +130,16 @@ def qg_delete_node(
     id: str,
 ) -> dict[str, Any]:
     """
-    Delete a node by ID.
+    Delete a SINGLE node by ID.
+
+    Use this tool to delete ONE node at a time. For deleting multiple nodes at once, use qg_bulk_delete instead.
+
+    MANDATORY PARAMETER: Ask the user for the node ID if not provided.
 
     Args:
-        id (str): The ID of the node to delete. ID is in UUID format.
+        id (str): [MANDATORY] The ID of the node to delete. ID is in UUID format.
             e.g., '123e4567-e89b-12d3-a456-426614174000'.
+            If the user doesn't know the ID, suggest using qg_get_nodes to list all nodes.
 
     Returns:
         ResponseType: formatted response with operation results + metadata

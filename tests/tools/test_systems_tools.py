@@ -6,7 +6,7 @@ import uuid
 import pytest
 from fastmcp.client import Client
 
-from tools import set_qg_manager  # type: ignore[import-not-found]
+from src.tools import set_qg_manager  # type: ignore[import-not-found]
 
 
 @pytest.mark.integration
@@ -724,3 +724,256 @@ async def test_qg_get_systems_invalid_proxy_type(mcp_client: Client):
     assert metadata["tool_name"] == "qg_get_systems"
     # API may or may not validate proxy type
     assert "success" in metadata
+
+
+@pytest.mark.integration
+async def test_qg_put_system(mcp_client: Client, test_infrastructure):
+    """Test updating a system with PUT operation."""
+    datacenter_id = test_infrastructure.get("datacenter_id")
+    node_version = test_infrastructure.get("node_version")
+    system_name = f"test_system_put_{uuid.uuid4().hex[:8]}"
+
+    # First create a system
+    create_result = await mcp_client.call_tool(
+        "qg_create_system",
+        arguments={
+            "name": system_name,
+            "system_type": "TERADATA",
+            "platform_type": "ON_PREM",
+            "data_center_id": datacenter_id,
+            "software_version": node_version,
+            "maximum_memory_per_node": 1073741824,
+            "description": "Original description",
+        },
+    )
+
+    assert create_result.data is not None
+    assert create_result.data["metadata"]["success"] is True
+    system_id = create_result.data["result"]["id"]
+
+    # Now update it using PUT
+    updated_name = f"updated_{system_name}"
+    result = await mcp_client.call_tool(
+        "qg_put_system",
+        arguments={
+            "id": system_id,
+            "name": updated_name,
+            "system_type": "TERADATA",
+            "platform_type": "ON_PREM",
+            "data_center_id": datacenter_id,
+            "software_version": node_version,
+            "maximum_memory_per_node": 2147483648,  # Changed to 2GB
+            "description": "Updated description",
+        },
+    )
+
+    assert result.data is not None
+    metadata = result.data["metadata"]
+    assert metadata["tool_name"] == "qg_put_system"
+    assert metadata["success"] is True
+
+    # Verify the update
+    if "result" in result.data:
+        updated_system = result.data["result"]
+        assert updated_system["name"] == updated_name
+        assert updated_system["description"] == "Updated description"
+        assert updated_system["maximumMemoryPerNode"] == 2147483648
+
+    # Clean up
+    await mcp_client.call_tool(
+        "qg_delete_system",
+        arguments={"id": system_id},
+    )
+
+
+@pytest.mark.integration
+async def test_qg_put_system_not_found(mcp_client: Client, test_infrastructure):
+    """Test updating a non-existent system returns 404."""
+    datacenter_id = test_infrastructure.get("datacenter_id")
+    node_version = test_infrastructure.get("node_version")
+    fake_system_id = str(uuid.uuid4())
+
+    result = await mcp_client.call_tool(
+        "qg_put_system",
+        arguments={
+            "id": fake_system_id,
+            "name": "nonexistent_system",
+            "system_type": "TERADATA",
+            "platform_type": "ON_PREM",
+            "data_center_id": datacenter_id,
+            "software_version": node_version,
+        },
+    )
+
+    assert result.data is not None
+    metadata = result.data["metadata"]
+    assert metadata["tool_name"] == "qg_put_system"
+    assert metadata["success"] is False
+
+
+@pytest.mark.integration
+async def test_qg_put_system_invalid_data(mcp_client: Client, test_infrastructure):
+    """Test updating system with invalid data."""
+    datacenter_id = test_infrastructure.get("datacenter_id")
+    node_version = test_infrastructure.get("node_version")
+    system_name = f"test_system_invalid_{uuid.uuid4().hex[:8]}"
+
+    # First create a system
+    create_result = await mcp_client.call_tool(
+        "qg_create_system",
+        arguments={
+            "name": system_name,
+            "system_type": "TERADATA",
+            "platform_type": "ON_PREM",
+            "data_center_id": datacenter_id,
+            "software_version": node_version,
+            "maximum_memory_per_node": 1073741824,
+        },
+    )
+
+    assert create_result.data is not None
+    assert create_result.data["metadata"]["success"] is True
+    system_id = create_result.data["result"]["id"]
+
+    # Try to update with invalid system_type
+    result = await mcp_client.call_tool(
+        "qg_put_system",
+        arguments={
+            "id": system_id,
+            "name": system_name,
+            "system_type": "INVALID_TYPE",  # Invalid enum value
+            "platform_type": "ON_PREM",
+            "data_center_id": datacenter_id,
+            "software_version": node_version,
+        },
+    )
+
+    assert result.data is not None
+    metadata = result.data["metadata"]
+    assert metadata["tool_name"] == "qg_put_system"
+    assert metadata["success"] is False
+
+    # Clean up
+    await mcp_client.call_tool(
+        "qg_delete_system",
+        arguments={"id": system_id},
+    )
+
+
+@pytest.mark.integration
+async def test_qg_put_system_partial_update(mcp_client: Client, test_infrastructure):
+    """Test that PUT replaces all fields (not partial update)."""
+    datacenter_id = test_infrastructure.get("datacenter_id")
+    node_version = test_infrastructure.get("node_version")
+    system_name = f"test_system_partial_{uuid.uuid4().hex[:8]}"
+
+    # Create system with description and region
+    create_result = await mcp_client.call_tool(
+        "qg_create_system",
+        arguments={
+            "name": system_name,
+            "system_type": "TERADATA",
+            "platform_type": "ON_PREM",
+            "data_center_id": datacenter_id,
+            "software_version": node_version,
+            "maximum_memory_per_node": 1073741824,
+            "description": "Original description",
+            "region": "us-east-1",
+        },
+    )
+
+    assert create_result.data is not None
+    assert create_result.data["metadata"]["success"] is True
+    system_id = create_result.data["result"]["id"]
+
+    # Update with PUT but don't include description/region
+    # These should be cleared (PUT is full replacement)
+    result = await mcp_client.call_tool(
+        "qg_put_system",
+        arguments={
+            "id": system_id,
+            "name": system_name,
+            "system_type": "TERADATA",
+            "platform_type": "ON_PREM",
+            "data_center_id": datacenter_id,
+            "software_version": node_version,
+            "maximum_memory_per_node": 1073741824,
+            # Note: NOT including description or region
+        },
+    )
+
+    assert result.data is not None
+    metadata = result.data["metadata"]
+    assert metadata["tool_name"] == "qg_put_system"
+    assert metadata["success"] is True
+
+    # Verify fields were cleared
+    if "result" in result.data:
+        updated_system = result.data["result"]
+        # Description and region should be empty/null since not provided in PUT
+        assert updated_system.get("description") in [None, "", "null"]
+        assert updated_system.get("region") in [None, "", "null"]
+
+    # Clean up
+    await mcp_client.call_tool(
+        "qg_delete_system",
+        arguments={"id": system_id},
+    )
+
+
+@pytest.mark.integration
+async def test_qg_put_system_with_tags(mcp_client: Client, test_infrastructure):
+    """Test updating system with tags."""
+    datacenter_id = test_infrastructure.get("datacenter_id")
+    node_version = test_infrastructure.get("node_version")
+    system_name = f"test_system_tags_{uuid.uuid4().hex[:8]}"
+
+    # Create system
+    create_result = await mcp_client.call_tool(
+        "qg_create_system",
+        arguments={
+            "name": system_name,
+            "system_type": "TERADATA",
+            "platform_type": "ON_PREM",
+            "data_center_id": datacenter_id,
+            "software_version": node_version,
+            "maximum_memory_per_node": 1073741824,
+        },
+    )
+
+    assert create_result.data is not None
+    assert create_result.data["metadata"]["success"] is True
+    system_id = create_result.data["result"]["id"]
+
+    # Update with tags
+    result = await mcp_client.call_tool(
+        "qg_put_system",
+        arguments={
+            "id": system_id,
+            "name": system_name,
+            "system_type": "TERADATA",
+            "platform_type": "ON_PREM",
+            "data_center_id": datacenter_id,
+            "software_version": node_version,
+            "maximum_memory_per_node": 1073741824,
+            "tags": {"environment": "test", "owner": "pytest"},
+        },
+    )
+
+    assert result.data is not None
+    metadata = result.data["metadata"]
+    assert metadata["tool_name"] == "qg_put_system"
+    assert metadata["success"] is True
+
+    # Verify tags
+    if "result" in result.data:
+        updated_system = result.data["result"]
+        assert "tags" in updated_system
+        assert updated_system["tags"].get("environment") == "test"
+        assert updated_system["tags"].get("owner") == "pytest"
+
+    # Clean up
+    await mcp_client.call_tool(
+        "qg_delete_system",
+        arguments={"id": system_id},
+    )

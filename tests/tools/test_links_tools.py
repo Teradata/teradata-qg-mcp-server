@@ -456,9 +456,11 @@ async def test_qg_create_link_missing_required_params(mcp_client: Client):
 
     # Verify the error mentions missing required arguments
     error_msg = str(exc_info.value)
-    assert ("Missing required argument" in error_msg or 
-            "is a required property" in error_msg or
-            "Input validation error" in error_msg)
+    assert (
+        "Missing required argument" in error_msg
+        or "is a required property" in error_msg
+        or "Input validation error" in error_msg
+    )
 
 
 @pytest.mark.integration
@@ -706,3 +708,604 @@ async def test_qg_links_error_handling(mcp_client: Client):
     )
     assert result.data is not None
     assert "metadata" in result.data
+
+
+@pytest.mark.integration
+async def test_qg_update_link(mcp_client: Client, test_link):
+    """Test updating a link's name and description."""
+    link_id = test_link.get("id")
+    link_name = test_link.get("name")
+
+    result = await mcp_client.call_tool(
+        "qg_update_link",
+        arguments={
+            "id": link_id,
+            "name": link_name,
+            "description": "Updated description via PATCH",
+        },
+    )
+
+    assert result.data is not None
+    metadata = result.data["metadata"]
+    assert metadata["tool_name"] == "qg_update_link"
+    assert metadata["success"] is True
+
+    # Verify the update
+    get_result = await mcp_client.call_tool(
+        "qg_get_link_by_id", arguments={"id": link_id}
+    )
+    assert get_result.data["metadata"]["success"] is True
+    assert get_result.data["result"]["description"] == "Updated description via PATCH"
+
+
+@pytest.mark.integration
+async def test_qg_update_link_partial(mcp_client: Client, test_link):
+    """Test updating a link with only description (name still required)."""
+    link_id = test_link.get("id")
+    link_name = test_link.get("name")
+
+    result = await mcp_client.call_tool(
+        "qg_update_link",
+        arguments={
+            "id": link_id,
+            "name": link_name,
+            "description": "Partial update with description only",
+        },
+    )
+
+    assert result.data is not None
+    metadata = result.data["metadata"]
+    assert metadata["tool_name"] == "qg_update_link"
+    assert metadata["success"] is True
+
+
+@pytest.mark.integration
+async def test_qg_put_link_active(
+    mcp_client: Client,
+    test_link,
+    test_fabric,
+    test_connector,
+    test_comm_policy,
+    qg_manager,
+):
+    """Test replacing the active link version."""
+    link_id = test_link.get("id")
+    link_name = test_link.get("name")
+    fabric_id = test_fabric.get("id")
+
+    # Save original target connector so we can restore it
+    original_target_connector_id = test_link.get("targetConnectorId")
+    initiator_connector_id = test_link.get("initiatorConnectorId")
+    comm_policy_id = test_comm_policy.get("id")
+    original_description = test_link.get("description")
+    original_threads = test_link.get("initiatorThreadsPerQuery", 4)
+
+    result = await mcp_client.call_tool(
+        "qg_put_link_active",
+        arguments={
+            "id": link_id,
+            "name": link_name,
+            "fabricId": fabric_id,
+            "initiatorConnectorId": initiator_connector_id,
+            "targetConnectorId": original_target_connector_id,
+            "commPolicyId": comm_policy_id,
+            "description": "Updated active via PUT",
+            "initiatorThreadsPerQuery": 4,
+            "targetThreadsPerQuery": 4,
+        },
+    )
+
+    assert result.data is not None
+    metadata = result.data["metadata"]
+    assert metadata["tool_name"] == "qg_put_link_active"
+    assert metadata["success"] is True
+
+    # Verify the update
+    get_result = await mcp_client.call_tool(
+        "qg_get_link_active", arguments={"id": link_id}
+    )
+    assert get_result.data["metadata"]["success"] is True
+    active_link = get_result.data["result"]
+    assert active_link["description"] == "Updated active via PUT"
+    assert active_link["initiatorThreadsPerQuery"] == 4
+    assert active_link["targetThreadsPerQuery"] == 4
+
+    # Restore original state
+    await mcp_client.call_tool(
+        "qg_put_link_active",
+        arguments={
+            "id": link_id,
+            "name": link_name,
+            "fabricId": fabric_id,
+            "initiatorConnectorId": initiator_connector_id,
+            "targetConnectorId": original_target_connector_id,
+            "commPolicyId": comm_policy_id,
+            "description": original_description,
+            "initiatorThreadsPerQuery": original_threads,
+            "targetThreadsPerQuery": original_threads,
+        },
+    )
+
+
+@pytest.mark.integration
+async def test_qg_put_link_pending(
+    mcp_client: Client, test_fabric, test_connector, test_comm_policy, qg_manager
+):
+    """Test creating a pending link version."""
+    fabric_id = test_fabric.get("id")
+    initiator_connector_id = test_connector.get("id")
+    system_id = qg_manager.system_client.get_systems()[0].get("id")
+    connector_version = test_connector.get("softwareVersion")
+    comm_policy_id = test_comm_policy.get("id")
+
+    # Get connector software name
+    softwares = qg_manager.software_client.get_software()
+    connector_software_name = None
+    for sw in softwares:
+        if sw.get("type") == "CONNECTOR" and sw.get("version") == connector_version:
+            connector_software_name = sw.get("name")
+            break
+
+    # Create a second connector as target
+    second_connector = qg_manager.connector_client.create_connector(
+        name=f"test_connector_target_put_pending_{uuid.uuid4().hex[:8]}",
+        software_name=connector_software_name,
+        software_version=connector_version,
+        fabric_id=fabric_id,
+        system_id=system_id,
+    )
+
+    # Create a fresh link for this test
+    test_link = qg_manager.link_client.create_link(
+        name=f"test_link_put_pending_{uuid.uuid4().hex[:8]}",
+        fabricId=fabric_id,
+        initiatorConnectorId=initiator_connector_id,
+        targetConnectorId=second_connector.get("id"),
+        commPolicyId=comm_policy_id,
+        initiatorThreadsPerQuery=4,
+        targetThreadsPerQuery=4,
+    )
+
+    try:
+        link_id = test_link.get("id")
+        link_name = test_link.get("name")
+        target_connector_id = second_connector.get("id")
+
+        result = await mcp_client.call_tool(
+            "qg_put_link_pending",
+            arguments={
+                "id": link_id,
+                "name": link_name,
+                "fabricId": fabric_id,
+                "initiatorConnectorId": initiator_connector_id,
+                "targetConnectorId": target_connector_id,
+                "commPolicyId": comm_policy_id,
+                "description": "Pending link version",
+                "initiatorThreadsPerQuery": 5,
+                "targetThreadsPerQuery": 5,
+            },
+        )
+
+        assert result.data is not None
+        metadata = result.data["metadata"]
+        assert metadata["tool_name"] == "qg_put_link_pending"
+        assert metadata["success"] is True
+
+        # Verify the pending version exists
+        get_result = await mcp_client.call_tool(
+            "qg_get_link_pending", arguments={"id": link_id}
+        )
+        assert get_result.data["metadata"]["success"] is True
+        pending_link = get_result.data["result"]
+        # Verify the pending version was created with correct parameters
+        assert pending_link["initiatorThreadsPerQuery"] == 5
+        assert pending_link["targetThreadsPerQuery"] == 5
+        assert pending_link["fabricId"] == fabric_id
+        assert pending_link["commPolicyId"] == comm_policy_id
+    finally:
+        # Cleanup: delete link first, then connectors
+        try:
+            qg_manager.link_client.delete_link(link_id)
+        except Exception:
+            pass
+        try:
+            qg_manager.connector_client.delete_connector(second_connector.get("id"))
+        except Exception:
+            pass
+
+
+@pytest.mark.integration
+async def test_qg_update_link_active_workflow(
+    mcp_client: Client, test_fabric, test_connector, test_comm_policy, qg_manager
+):
+    """Test the full workflow: create pending → activate → verify."""
+    fabric_id = test_fabric.get("id")
+    initiator_connector_id = test_connector.get("id")
+    system_id = qg_manager.system_client.get_systems()[0].get("id")
+    connector_version = test_connector.get("softwareVersion")
+    comm_policy_id = test_comm_policy.get("id")
+
+    # Get connector software name
+    softwares = qg_manager.software_client.get_software()
+    connector_software_name = None
+    for sw in softwares:
+        if sw.get("type") == "CONNECTOR" and sw.get("version") == connector_version:
+            connector_software_name = sw.get("name")
+            break
+
+    # Create a second connector as target
+    second_connector = qg_manager.connector_client.create_connector(
+        name=f"test_connector_target_workflow_{uuid.uuid4().hex[:8]}",
+        software_name=connector_software_name,
+        software_version=connector_version,
+        fabric_id=fabric_id,
+        system_id=system_id,
+    )
+
+    # Create a fresh link for this test
+    test_link = qg_manager.link_client.create_link(
+        name=f"test_link_workflow_{uuid.uuid4().hex[:8]}",
+        fabricId=fabric_id,
+        initiatorConnectorId=initiator_connector_id,
+        targetConnectorId=second_connector.get("id"),
+        commPolicyId=comm_policy_id,
+        initiatorThreadsPerQuery=4,
+        targetThreadsPerQuery=4,
+    )
+
+    try:
+        link_id = test_link.get("id")
+        link_name = test_link.get("name")
+        target_connector_id = second_connector.get("id")
+
+        # Step 1: Create pending version
+        put_result = await mcp_client.call_tool(
+            "qg_put_link_pending",
+            arguments={
+                "id": link_id,
+                "name": link_name,
+                "fabricId": fabric_id,
+                "initiatorConnectorId": initiator_connector_id,
+                "targetConnectorId": target_connector_id,
+                "commPolicyId": comm_policy_id,
+                "description": "Pending for activation workflow",
+                "initiatorThreadsPerQuery": 3,
+                "targetThreadsPerQuery": 3,
+            },
+        )
+        assert put_result.data["metadata"]["success"] is True
+
+        # Step 2: Get the pending version to extract versionId
+        pending_result = await mcp_client.call_tool(
+            "qg_get_link_pending", arguments={"id": link_id}
+        )
+        assert pending_result.data["metadata"]["success"] is True
+        version_id = pending_result.data["result"]["versionId"]
+
+        # Step 3: Activate the pending version
+        activate_result = await mcp_client.call_tool(
+            "qg_update_link_active",
+            arguments={"id": link_id, "version_id": version_id},
+        )
+        assert activate_result.data["metadata"]["success"] is True
+
+        # Step 4: Verify the activation
+        active_result = await mcp_client.call_tool(
+            "qg_get_link_active", arguments={"id": link_id}
+        )
+        assert active_result.data["metadata"]["success"] is True
+        active_link = active_result.data["result"]
+        # Verify the activation worked with correct parameters
+        assert active_link["initiatorThreadsPerQuery"] == 3
+        assert active_link["targetThreadsPerQuery"] == 3
+        assert active_link["versionId"] == version_id
+    finally:
+        # Cleanup: delete link first, then connectors
+        try:
+            qg_manager.link_client.delete_link(link_id)
+        except Exception:
+            pass
+        try:
+            qg_manager.connector_client.delete_connector(second_connector.get("id"))
+        except Exception:
+            pass
+
+
+@pytest.mark.integration
+async def test_qg_delete_link_pending(
+    mcp_client: Client, test_fabric, test_connector, test_comm_policy, qg_manager
+):
+    """Test deleting a pending link version."""
+    fabric_id = test_fabric.get("id")
+    initiator_connector_id = test_connector.get("id")
+    system_id = qg_manager.system_client.get_systems()[0].get("id")
+    connector_version = test_connector.get("softwareVersion")
+    comm_policy_id = test_comm_policy.get("id")
+
+    # Get connector software name
+    softwares = qg_manager.software_client.get_software()
+    connector_software_name = None
+    for sw in softwares:
+        if sw.get("type") == "CONNECTOR" and sw.get("version") == connector_version:
+            connector_software_name = sw.get("name")
+            break
+
+    # Create a second connector as target
+    second_connector = qg_manager.connector_client.create_connector(
+        name=f"test_connector_target_delete_pending_{uuid.uuid4().hex[:8]}",
+        software_name=connector_software_name,
+        software_version=connector_version,
+        fabric_id=fabric_id,
+        system_id=system_id,
+    )
+
+    # Create a fresh link for this test
+    test_link = qg_manager.link_client.create_link(
+        name=f"test_link_delete_pending_{uuid.uuid4().hex[:8]}",
+        fabricId=fabric_id,
+        initiatorConnectorId=initiator_connector_id,
+        targetConnectorId=second_connector.get("id"),
+        commPolicyId=comm_policy_id,
+        initiatorThreadsPerQuery=4,
+        targetThreadsPerQuery=4,
+    )
+
+    try:
+        link_id = test_link.get("id")
+        link_name = test_link.get("name")
+        target_connector_id = second_connector.get("id")
+
+        # Create a pending version
+        await mcp_client.call_tool(
+            "qg_put_link_pending",
+            arguments={
+                "id": link_id,
+                "name": link_name,
+                "fabricId": fabric_id,
+                "initiatorConnectorId": initiator_connector_id,
+                "targetConnectorId": target_connector_id,
+                "commPolicyId": comm_policy_id,
+                "description": "Pending for deletion",
+                "initiatorThreadsPerQuery": 2,
+                "targetThreadsPerQuery": 2,
+            },
+        )
+
+        # Delete the pending version
+        delete_result = await mcp_client.call_tool(
+            "qg_delete_link_pending", arguments={"id": link_id}
+        )
+
+        assert delete_result.data is not None
+        metadata = delete_result.data["metadata"]
+        assert metadata["tool_name"] == "qg_delete_link_pending"
+        assert metadata["success"] is True
+
+        # Verify deletion - getting pending should fail
+        get_result = await mcp_client.call_tool(
+            "qg_get_link_pending", arguments={"id": link_id}
+        )
+        assert get_result.data["metadata"]["success"] is False
+    finally:
+        qg_manager.connector_client.delete_connector(second_connector.get("id"))
+
+
+@pytest.mark.integration
+async def test_qg_delete_link_previous(
+    mcp_client: Client, test_fabric, test_connector, test_comm_policy, qg_manager
+):
+    """Test deleting a previous link version after creating one."""
+    fabric_id = test_fabric.get("id")
+    initiator_connector_id = test_connector.get("id")
+    system_id = qg_manager.system_client.get_systems()[0].get("id")
+    connector_version = test_connector.get("softwareVersion")
+    comm_policy_id = test_comm_policy.get("id")
+
+    # Get connector software name
+    softwares = qg_manager.software_client.get_software()
+    connector_software_name = None
+    for sw in softwares:
+        if sw.get("type") == "CONNECTOR" and sw.get("version") == connector_version:
+            connector_software_name = sw.get("name")
+            break
+
+    # Create a second connector as target
+    second_connector = qg_manager.connector_client.create_connector(
+        name=f"test_connector_target_delete_previous_{uuid.uuid4().hex[:8]}",
+        software_name=connector_software_name,
+        software_version=connector_version,
+        fabric_id=fabric_id,
+        system_id=system_id,
+    )
+
+    # Create a fresh link for this test
+    test_link = qg_manager.link_client.create_link(
+        name=f"test_link_delete_previous_{uuid.uuid4().hex[:8]}",
+        fabricId=fabric_id,
+        initiatorConnectorId=initiator_connector_id,
+        targetConnectorId=second_connector.get("id"),
+        commPolicyId=comm_policy_id,
+        initiatorThreadsPerQuery=4,
+        targetThreadsPerQuery=4,
+    )
+
+    try:
+        link_id = test_link.get("id")
+        link_name = test_link.get("name")
+        target_connector_id = second_connector.get("id")
+
+        # Create pending and activate to generate a previous version
+        await mcp_client.call_tool(
+            "qg_put_link_pending",
+            arguments={
+                "id": link_id,
+                "name": link_name,
+                "fabricId": fabric_id,
+                "initiatorConnectorId": initiator_connector_id,
+                "targetConnectorId": target_connector_id,
+                "commPolicyId": comm_policy_id,
+                "description": "Will become previous",
+                "initiatorThreadsPerQuery": 2,
+                "targetThreadsPerQuery": 2,
+            },
+        )
+
+        pending_result = await mcp_client.call_tool(
+            "qg_get_link_pending", arguments={"id": link_id}
+        )
+        version_id = pending_result.data["result"]["versionId"]
+
+        await mcp_client.call_tool(
+            "qg_update_link_active",
+            arguments={"id": link_id, "version_id": version_id},
+        )
+
+        # Now we should have a previous version
+        # Delete the previous version
+        delete_result = await mcp_client.call_tool(
+            "qg_delete_link_previous", arguments={"id": link_id}
+        )
+
+        assert delete_result.data is not None
+        metadata = delete_result.data["metadata"]
+        assert metadata["tool_name"] == "qg_delete_link_previous"
+        assert metadata["success"] is True
+
+        # Verify deletion - getting previous should fail
+        get_result = await mcp_client.call_tool(
+            "qg_get_link_previous", arguments={"id": link_id}
+        )
+        assert get_result.data["metadata"]["success"] is False
+    finally:
+        qg_manager.connector_client.delete_connector(second_connector.get("id"))
+
+
+@pytest.mark.integration
+async def test_qg_update_link_active_with_previous_version(
+    mcp_client: Client, test_fabric, test_connector, test_comm_policy, qg_manager
+):
+    """Test rollback scenario - activate previous version."""
+    fabric_id = test_fabric.get("id")
+    initiator_connector_id = test_connector.get("id")
+    system_id = qg_manager.system_client.get_systems()[0].get("id")
+    connector_version = test_connector.get("softwareVersion")
+    comm_policy_id = test_comm_policy.get("id")
+
+    # Get connector software name
+    softwares = qg_manager.software_client.get_software()
+    connector_software_name = None
+    for sw in softwares:
+        if sw.get("type") == "CONNECTOR" and sw.get("version") == connector_version:
+            connector_software_name = sw.get("name")
+            break
+
+    # Create a second connector as target
+    second_connector = qg_manager.connector_client.create_connector(
+        name=f"test_connector_target_rollback_{uuid.uuid4().hex[:8]}",
+        software_name=connector_software_name,
+        software_version=connector_version,
+        fabric_id=fabric_id,
+        system_id=system_id,
+    )
+
+    # Create a fresh link for this test
+    test_link = qg_manager.link_client.create_link(
+        name=f"test_link_rollback_{uuid.uuid4().hex[:8]}",
+        fabricId=fabric_id,
+        initiatorConnectorId=initiator_connector_id,
+        targetConnectorId=second_connector.get("id"),
+        commPolicyId=comm_policy_id,
+        initiatorThreadsPerQuery=4,
+        targetThreadsPerQuery=4,
+    )
+
+    try:
+        link_id = test_link.get("id")
+        link_name = test_link.get("name")
+        target_connector_id = second_connector.get("id")
+
+        # Create and activate a new version to generate previous
+        await mcp_client.call_tool(
+            "qg_put_link_pending",
+            arguments={
+                "id": link_id,
+                "name": link_name,
+                "fabricId": fabric_id,
+                "initiatorConnectorId": initiator_connector_id,
+                "targetConnectorId": target_connector_id,
+                "commPolicyId": comm_policy_id,
+                "description": "Version that will be rolled back",
+                "initiatorThreadsPerQuery": 2,
+                "targetThreadsPerQuery": 2,
+            },
+        )
+
+        pending_result = await mcp_client.call_tool(
+            "qg_get_link_pending", arguments={"id": link_id}
+        )
+        version_id = pending_result.data["result"]["versionId"]
+
+        await mcp_client.call_tool(
+            "qg_update_link_active",
+            arguments={"id": link_id, "version_id": version_id},
+        )
+
+        # Get the previous version
+        previous_result = await mcp_client.call_tool(
+            "qg_get_link_previous", arguments={"id": link_id}
+        )
+        assert previous_result.data["metadata"]["success"] is True
+        previous_version = previous_result.data["result"]
+
+        # Recreate previous as pending
+        await mcp_client.call_tool(
+            "qg_put_link_pending",
+            arguments={
+                "id": link_id,
+                "name": link_name,
+                "fabricId": previous_version["fabricId"],
+                "initiatorConnectorId": previous_version["initiatorConnectorId"],
+                "targetConnectorId": previous_version["targetConnectorId"],
+                "commPolicyId": previous_version["commPolicyId"],
+                "description": previous_version.get("description", ""),
+                "initiatorThreadsPerQuery": previous_version.get(
+                    "initiatorThreadsPerQuery", 4
+                ),
+                "targetThreadsPerQuery": previous_version.get(
+                    "targetThreadsPerQuery", 4
+                ),
+            },
+        )
+
+        # Activate the "rollback" pending version
+        rollback_pending = await mcp_client.call_tool(
+            "qg_get_link_pending", arguments={"id": link_id}
+        )
+        rollback_version_id = rollback_pending.data["result"]["versionId"]
+
+        activate_result = await mcp_client.call_tool(
+            "qg_update_link_active",
+            arguments={"id": link_id, "version_id": rollback_version_id},
+        )
+        assert activate_result.data["metadata"]["success"] is True
+
+        # Verify we've rolled back
+        active_result = await mcp_client.call_tool(
+            "qg_get_link_active", arguments={"id": link_id}
+        )
+        assert active_result.data["metadata"]["success"] is True
+        # The description should not be "Version that will be rolled back"
+        assert (
+            active_result.data["result"].get("description")
+            != "Version that will be rolled back"
+        )
+    finally:
+        # Cleanup: delete link first, then connectors
+        try:
+            qg_manager.link_client.delete_link(link_id)
+        except Exception:
+            pass
+        try:
+            qg_manager.connector_client.delete_connector(second_connector.get("id"))
+        except Exception:
+            pass

@@ -17,6 +17,8 @@ def qg_get_users() -> dict[str, Any]:
     """
     Get all QueryGrid user accounts.
 
+    NO PARAMETERS REQUIRED.
+
     Returns:
         ResponseType: formatted response with operation results + metadata
     """
@@ -36,8 +38,11 @@ def qg_get_user_by_username(username: str) -> dict[str, Any]:
     """
     Get a specific QueryGrid user account by username.
 
+    MANDATORY PARAMETER: Ask the user for the username if not provided.
+
     Args:
-        username (str): The username of the user to retrieve
+        username (str): [MANDATORY] The username of the user to retrieve.
+            If the user doesn't know the username, suggest using qg_get_users to list all users.
 
     Returns:
         ResponseType: formatted response with operation results + metadata
@@ -54,14 +59,29 @@ def qg_get_user_by_username(username: str) -> dict[str, Any]:
 
 
 @mcp.tool
-def qg_create_user(username: str, password: str, description: str | None = None) -> dict[str, Any]:
+def qg_create_user(
+    username: str, password: str, description: str | None = None
+) -> dict[str, Any]:
     """
     Create a new user in QueryGrid Manager.
 
+    MANDATORY PARAMETERS: Ask the user for 'username' and 'password' if not provided.
+    OPTIONAL PARAMETERS: 'description' can be omitted.
+
+    ⚠️ CRITICAL GOTCHAS FOR LLMs:
+    1. Password MUST be at least 14 characters long with special symbols and numbers
+    2. Username MUST be unique - duplicate usernames will cause creation to FAIL
+    3. Empty username or password will cause creation to FAIL
+    4. Special characters (dots, hyphens) are allowed in usernames
+
     Args:
-        username (str): The username for the new user.
-        password (str): The password for the new user.
-        description (str | None): Optional description of the user.
+        username (str): [MANDATORY] The username for the new user.
+            Ask the user: "What username would you like to create?"
+            Must be unique and non-empty. Can contain special characters like dots and hyphens.
+        password (str): [MANDATORY] The password for the new user.
+            Ask the user: "What password would you like to set for this user?"
+            MUST be at least 14 characters with special symbols and numbers (e.g., 'TestPass123@abc!').
+        description (str | None): [OPTIONAL] Description of the user.
 
     Returns:
         ResponseType: formatted response with operation results + metadata
@@ -86,10 +106,15 @@ def qg_delete_user(
     username: str,
 ) -> dict[str, Any]:
     """
-    Delete a user by username.
+    Delete a SINGLE user by username.
+
+    Use this tool to delete ONE user at a time. For deleting multiple users at once, do NOT use this tool.
+
+    MANDATORY PARAMETER: Ask the user for the username if not provided.
 
     Args:
-        username (str): The username of the user to delete.
+        username (str): [MANDATORY] The username of the user to delete.
+            If the user doesn't know the username, suggest using qg_get_users to list all users.
 
     Returns:
         ResponseType: formatted response with operation results + metadata
@@ -103,3 +128,40 @@ def qg_delete_user(
         return qg_manager.user_client.delete_user(username)
 
     return run_tool("qg_delete_user", _call)
+
+
+@mcp.tool
+def qg_update_user(
+    username: str,
+    password: str,
+    description: str | None = None,
+) -> dict[str, Any]:
+    """
+    Update an existing user in QueryGrid Manager.
+
+    MANDATORY PARAMETERS: Ask the user for 'username' and 'password' if not provided.
+    OPTIONAL PARAMETERS: 'description' can be omitted.
+
+    Args:
+        username (str): [MANDATORY] The username of the user to update.
+            If the user doesn't know the username, suggest using qg_get_users to list all users.
+        password (str): [MANDATORY] The password for the user (required by API).
+            Ask the user: "What password would you like to set for this user?"
+        description (str | None): [OPTIONAL] New description of the user.
+
+    Returns:
+        ResponseType: formatted response with operation results + metadata
+    """
+    logger.debug(
+        "Tool: qg_update_user called with username=%s, description=%s",
+        username,
+        description,
+    )
+
+    def _call():
+        qg_manager = tools.get_qg_manager()
+        if qg_manager is None:
+            raise RuntimeError("QueryGridManager is not initialized")
+        return qg_manager.user_client.update_user(username, password, description)
+
+    return run_tool("qg_update_user", _call)

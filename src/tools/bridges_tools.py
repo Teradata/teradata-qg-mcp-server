@@ -12,14 +12,18 @@ logger = logging.getLogger(__name__)
 
 
 @mcp.tool
-def qg_get_bridges(filter_by_system_id: str | None = None, filter_by_name: str | None = None) -> dict[str, Any]:
+def qg_get_bridges(
+    filter_by_system_id: str | None = None, filter_by_name: str | None = None
+) -> dict[str, Any]:
     """
-    Get all QueryGrid bridges. Optional arguments can be ignored if not needed.
+    Get all QueryGrid bridges.
+
+    ALL PARAMETERS ARE OPTIONAL. If the user does not specify filters, retrieve all bridges.
 
     Args:
-        filter_by_system_id (str | None): [Optional] Filter by system ID. ID is in UUID format.
+        filter_by_system_id (str | None): [OPTIONAL] Filter by system ID. ID is in UUID format.
             e.g., '123e4567-e89b-12d3-a456-426614174000'
-        filter_by_name (str | None): [Optional] Filter bridges by name
+        filter_by_name (str | None): [OPTIONAL] Filter bridges by name
 
     Returns:
         ResponseType: formatted response with operation results + metadata
@@ -46,8 +50,12 @@ def qg_get_bridge_by_id(id: str) -> dict[str, Any]:
     """
     Get a specific QueryGrid bridge by ID.
 
+    MANDATORY PARAMETER: Ask the user for the bridge ID if not provided.
+
     Args:
-        id (str): The ID of the bridge to retrieve. ID is in UUID format. e.g., '123e4567-e89b-12d3-a456-426614174000'.
+        id (str): [MANDATORY] The ID of the bridge to retrieve. ID is in UUID format.
+            e.g., '123e4567-e89b-12d3-a456-426614174000'
+            If the user doesn't know the ID, suggest using qg_get_bridges first to list all bridges.
 
     Returns:
         ResponseType: formatted response with operation results + metadata
@@ -73,12 +81,26 @@ def qg_create_bridge(
     """
     Create a new bridge in QueryGrid Manager.
 
+    MANDATORY PARAMETERS: Ask the user for 'name' and 'system_id' if not provided.
+    OPTIONAL PARAMETERS: 'node_ids' and 'description' can be omitted.
+
+    ⚠️ CRITICAL GOTCHAS FOR LLMs:
+    1. The system_id MUST reference an existing system - will FAIL if system doesn't exist
+    2. If node_ids is omitted, ALL nodes from the specified system will be used
+    3. If node_ids is provided, only those specific nodes will be used as bridge nodes
+    4. Node IDs must belong to the specified system - mixing nodes from different systems will FAIL
+
     Args:
-        name (str): The name of the bridge.
-        system_id (str): The system ID associated with the bridge. ID is in UUID format.
-            e.g., '123e4567-e89b-12d3-a456-426614174000'.
-        node_ids (list[str] | None): List of node IDs from the specified system to act as a bridge.
-        description (str | None): Optional description of the bridge.
+        name (str): [MANDATORY] The name of the bridge.
+            Ask the user: "What would you like to name the bridge?"
+        system_id (str): [MANDATORY] The system ID associated with the bridge. ID is in UUID format.
+            e.g., '123e4567-e89b-12d3-a456-426614174000'
+            If the user doesn't know the system ID, suggest using qg_get_systems to list available systems.
+            The system MUST already exist.
+        node_ids (list[str] | None): [OPTIONAL] List of node IDs from the specified system to act as a bridge.
+            If not provided, all nodes from the system will be used.
+            If provided, nodes must belong to the specified system.
+        description (str | None): [OPTIONAL] Description of the bridge.
 
     Returns:
         ResponseType: formatted response with operation results + metadata
@@ -95,7 +117,9 @@ def qg_create_bridge(
         qg_manager = tools.get_qg_manager()
         if qg_manager is None:
             raise RuntimeError("QueryGridManager is not initialized")
-        return qg_manager.bridge_client.create_bridge(name, system_id, node_ids, description)
+        return qg_manager.bridge_client.create_bridge(
+            name, system_id, node_ids, description
+        )
 
     return run_tool("qg_create_bridge", _call)
 
@@ -105,11 +129,16 @@ def qg_delete_bridge(
     id: str,
 ) -> dict[str, Any]:
     """
-    Delete a bridge by ID.
+    Delete a SINGLE bridge by ID.
+
+    Use this tool to delete ONE bridge at a time. For deleting multiple bridges at once, do NOT use this tool.
+
+    MANDATORY PARAMETER: Ask the user for the bridge ID if not provided.
 
     Args:
-        id (str): The ID of the bridge to delete. ID is in UUID format.
-            e.g., '123e4567-e89b-12d3-a456-426614174000'.
+        id (str): [MANDATORY] The ID of the bridge to delete. ID is in UUID format.
+            e.g., '123e4567-e89b-12d3-a456-426614174000'
+            If the user doesn't know the ID, suggest using qg_get_bridges first to list all bridges.
 
     Returns:
         ResponseType: formatted response with operation results + metadata
@@ -123,3 +152,56 @@ def qg_delete_bridge(
         return qg_manager.bridge_client.delete_bridge(id)
 
     return run_tool("qg_delete_bridge", _call)
+
+
+@mcp.tool
+def qg_update_bridge(
+    id: str,
+    name: str | None = None,
+    system_id: str | None = None,
+    node_ids: list[str] | None = None,
+    description: str | None = None,
+) -> dict[str, Any]:
+    """
+    Update an existing bridge in QueryGrid Manager.
+
+    MANDATORY PARAMETER: 'id' is required - ask the user if not provided.
+    OPTIONAL PARAMETERS: All other parameters are optional - only provide the fields the user wants to update.
+
+    Note: The API requires 'name' and 'system_id' internally, but if not provided here,
+    the current values will be automatically retrieved and preserved.
+
+    Args:
+        id (str): [MANDATORY] The ID of the bridge to update. ID is in UUID format.
+            e.g., '123e4567-e89b-12d3-a456-426614174000'
+            If the user doesn't know the ID, suggest using qg_get_bridges first to list all bridges.
+        name (str | None): [OPTIONAL] New name for the bridge.
+            Only provide this if the user wants to change the bridge name.
+        system_id (str | None): [OPTIONAL] New system ID associated with the bridge. ID is in UUID format.
+            Only provide this if the user wants to move the bridge to a different system.
+        node_ids (list[str] | None): [OPTIONAL] New list of node IDs from the specified system to act as a bridge.
+            Only provide this if the user wants to change which nodes are used.
+        description (str | None): [OPTIONAL] New description of the bridge.
+            Only provide this if the user wants to change the description.
+
+    Returns:
+        ResponseType: formatted response with operation results + metadata
+    """
+    logger.debug(
+        "Tool: qg_update_bridge called with id=%s, name=%s, system_id=%s, node_ids=%s, description=%s",
+        id,
+        name,
+        system_id,
+        node_ids,
+        description,
+    )
+
+    def _call():
+        qg_manager = tools.get_qg_manager()
+        if qg_manager is None:
+            raise RuntimeError("QueryGridManager is not initialized")
+        return qg_manager.bridge_client.update_bridge(
+            id, name, system_id, node_ids, description
+        )
+
+    return run_tool("qg_update_bridge", _call)

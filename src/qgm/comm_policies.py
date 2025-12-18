@@ -148,3 +148,177 @@ class CommPolicyClient(BaseClient):
             "tags": tags,
         }
         return self._request("POST", api_endpoint, json=data)
+
+    def update_comm_policy(
+        self,
+        id: str,
+        name: str | None = None,
+        description: str | None = None,
+    ) -> Any:
+        """
+        Update a communication policy using PATCH (partial update).
+
+        Args:
+            id (str): The ID of the communication policy to update.
+            name (str | None): The name of the communication policy.
+            description (str | None): Description of the communication policy.
+
+        Returns:
+            dict[str, Any]: The response from the API.
+        """
+        data: dict[str, Any] = {}
+        if self._is_valid_param(name):
+            data["name"] = name
+        if self._is_valid_param(description):
+            data["description"] = description
+
+        return self._request("PATCH", f"{self.BASE_ENDPOINT}/{id}", json=data)
+
+    def update_comm_policy_active(
+        self,
+        id: str,
+        version_id: str,
+    ) -> Any:
+        """
+        Activate a specific version (pending or previous) of a communication policy using PATCH.
+
+        NOTE FOR LLMs: When a comm-policy is created, the response contains:
+        - 'id': The policy wrapper ID (remains constant across versions)
+        - 'versionId': The specific version ID (unique for each active/pending/previous version)
+
+        To activate a pending or previous version:
+        1. Get the pending/previous version using get_comm_policy_pending() or get_comm_policy_previous()
+        2. Extract the 'versionId' from that response
+        3. Call this method with the policy 'id' and the 'versionId' to activate
+
+        Args:
+            id (str): The policy wrapper ID (constant across all versions).
+            version_id (str): The specific version ID to activate (from pending or previous version).
+
+        Returns:
+            dict[str, Any]: The response from the API.
+        """
+        return self._request(
+            "PATCH", f"{self.BASE_ENDPOINT}/{id}/active", data=version_id
+        )
+
+    def put_comm_policy_active(
+        self,
+        id: str,
+        name: str,
+        transfer_concurrency: int,
+        description: str | None = None,
+        security_option: str = "INTEGRITY_SECURE_ENCRYPTION_ALL",
+        security_algorithm: str = "AES_GCM",
+        integrity_headers_only: bool = False,
+        authentication_key_size: int = 1536,
+        encryption_key_size: int = 128,
+        compression_algorithm: str | None = None,
+        policy_version: int = 2,
+        tags: dict[str, str] | None = None,
+    ) -> Any:
+        """
+        Update the active version of a communication policy using PUT (full replacement).
+
+        Args:
+            id (str): The ID of the communication policy.
+            name (str): The name of the communication policy.
+            transfer_concurrency (int): The number of streams to use for communication.
+            description (str | None): Description of the communication policy.
+            security_option (str): Type of security mechanisms to enable.
+            security_algorithm (str): The algorithm to use for integrity checks and encryption.
+            integrity_headers_only (bool): Only perform integrity checks on message headers.
+            authentication_key_size (int): The size of the authentication key.
+            encryption_key_size (int): The size of the encryption key.
+            compression_algorithm (str | None): Compression algorithm to use.
+            policy_version (int): The version of comm-policy.
+            tags (dict[str, str] | None): String key/value pairs for context.
+
+        Returns:
+            dict[str, Any]: The response from the API.
+        """
+        data: dict[str, Any] = {
+            "name": name,
+            "transferConcurrency": transfer_concurrency,
+            "description": description,
+            "securityOption": security_option,
+            "securityAlgorithm": security_algorithm,
+            "integrityHeadersOnly": integrity_headers_only,
+            "authenticationKeySize": authentication_key_size,
+            "encryptionKeySize": encryption_key_size,
+            "compressionAlgorithm": compression_algorithm,
+            "policyVersion": policy_version,
+            "tags": tags,
+        }
+        return self._request("PUT", f"{self.BASE_ENDPOINT}/{id}/active", json=data)
+
+    def put_comm_policy_pending(
+        self,
+        id: str,
+        transfer_concurrency: int,
+        description: str | None = None,
+        security_option: str = "INTEGRITY_SECURE_ENCRYPTION_ALL",
+        security_algorithm: str = "AES_GCM",
+        integrity_headers_only: bool = False,
+        authentication_key_size: int = 1536,
+        encryption_key_size: int = 128,
+        compression_algorithm: str | None = None,
+        policy_version: int = 2,
+        tags: dict[str, str] | None = None,
+    ) -> Any:
+        """
+        Create or replace the pending version of a communication policy using PUT.
+
+        Args:
+            id (str): The ID of the communication policy.
+            transfer_concurrency (int): The number of streams to use for communication.
+            description (str | None): Description of the communication policy.
+            security_option (str): Type of security mechanisms to enable.
+            security_algorithm (str): The algorithm to use for integrity checks and encryption.
+            integrity_headers_only (bool): Only perform integrity checks on message headers.
+            authentication_key_size (int): The size of the authentication key.
+            encryption_key_size (int): The size of the encryption key.
+            compression_algorithm (str | None): Compression algorithm to use.
+            policy_version (int): The version of comm-policy.
+            tags (dict[str, str] | None): String key/value pairs for context.
+
+        Returns:
+            dict[str, Any]: The response from the API.
+        """
+        data: dict[str, Any] = {
+            "transferConcurrency": transfer_concurrency,
+            "description": description,
+            "securityOption": security_option,
+            "securityAlgorithm": security_algorithm,
+            "integrityHeadersOnly": integrity_headers_only,
+            "authenticationKeySize": authentication_key_size,
+            "encryptionKeySize": encryption_key_size,
+            "compressionAlgorithm": compression_algorithm,
+            "policyVersion": policy_version,
+            "tags": tags,
+        }
+        return self._request("PUT", f"{self.BASE_ENDPOINT}/{id}/pending", json=data)
+
+    def delete_comm_policy_pending(self, id: str) -> Any:
+        """
+        Delete the pending version of a communication policy.
+
+        Args:
+            id (str): The ID of the communication policy.
+
+        Returns:
+            dict[str, Any]: The response from the API.
+        """
+        return self._request("DELETE", f"{self.BASE_ENDPOINT}/{id}/pending")
+
+    def delete_comm_policy_previous(self, id: str) -> Any:
+        """
+        Delete the previous version of a communication policy.
+
+        Args:
+            id (str): The ID of the communication policy.
+
+        Returns:
+            dict[str, Any]: The response from the API.
+        """
+        return self._request("DELETE", f"{self.BASE_ENDPOINT}/{id}/previous")

@@ -118,3 +118,188 @@ class ConnectorClient(BaseClient):
         if tags is not None:
             data["tags"] = tags
         return self._request("POST", self.BASE_ENDPOINT, json=data)
+
+    def update_connector(
+        self,
+        id: str,
+        name: str | None = None,
+        description: str | None = None,
+    ) -> Any:
+        """
+        Update Connector name or description using PATCH (partial update).
+
+        Args:
+            id (str): The ID of the connector to update.
+            name (str | None): The name of the connector.
+            description (str | None): Description of the connector.
+
+        Returns:
+            dict[str, Any]: The response from the API.
+        """
+        data: dict[str, Any] = {}
+        if self._is_valid_param(name):
+            data["name"] = name
+        if self._is_valid_param(description):
+            data["description"] = description
+
+        return self._request("PATCH", f"{self.BASE_ENDPOINT}/{id}", json=data)
+
+    def update_connector_active(
+        self,
+        id: str,
+        version_id: str,
+    ) -> Any:
+        """
+        Activate a specific version (pending or previous) of a connector using PATCH.
+
+        NOTE FOR LLMs: When a connector is created, the response contains:
+        - 'id': The connector wrapper ID (remains constant across versions)
+        - 'versionId': The specific version ID (unique for each active/pending/previous version)
+        
+        To activate a pending or previous version:
+        1. Get the pending/previous version using get_connector_pending() or get_connector_previous()
+        2. Extract the 'versionId' from that response
+        3. Call this method with the connector 'id' and the 'versionId' to activate
+
+        Args:
+            id (str): The connector wrapper ID (constant across all versions).
+            version_id (str): The specific version ID to activate (from pending or previous version).
+
+        Returns:
+            dict[str, Any]: The response from the API.
+        """
+        return self._request(
+            "PATCH", f"{self.BASE_ENDPOINT}/{id}/active", data=version_id
+        )
+
+    def put_connector_active(
+        self,
+        id: str,
+        software_name: str,
+        software_version: str,
+        fabric_id: str,
+        system_id: str,
+        description: str | None = None,
+        driver_nodes: list[str] | None = None,
+        properties: dict[str, Any] | None = None,
+        overrideable_properties: list[str] | None = None,
+        allowed_os_users: list[str] | None = None,
+        tags: dict[str, str] | None = None,
+    ) -> Any:
+        """
+        Update the active version of a connector using PUT (full replacement).
+
+        Args:
+            id (str): The ID of the connector.
+            software_name (str): The name of the software package.
+            software_version (str): The version of the software package.
+            fabric_id (str): The ID of the fabric this connector belongs to.
+            system_id (str): The ID of the system this connector belongs to.
+            description (str | None): Description of the connector.
+            driver_nodes (list[str] | None): List of node IDs where drivers should be installed.
+            properties (dict | None): Properties to configure the connector.
+            overrideable_properties (list[str] | None): Property names that can be overridden at runtime.
+            allowed_os_users (list[str] | None): OS users allowed to access this connector.
+            tags (dict | None): String key/value pairs for context.
+
+        Returns:
+            dict[str, Any]: The response from the API.
+        """
+        data: dict[str, Any] = {
+            "softwareName": software_name,
+            "softwareVersion": software_version,
+            "fabricId": fabric_id,
+            "systemId": system_id,
+        }
+        if description is not None:
+            data["description"] = description
+        if driver_nodes is not None:
+            data["driverNodes"] = driver_nodes
+        if properties is not None:
+            data["properties"] = properties
+        if overrideable_properties is not None:
+            data["overrideableProperties"] = overrideable_properties
+        if allowed_os_users is not None:
+            data["allowedOSUsers"] = allowed_os_users
+        if tags is not None:
+            data["tags"] = tags
+
+        return self._request("PUT", f"{self.BASE_ENDPOINT}/{id}/active", json=data)
+
+    def put_connector_pending(
+        self,
+        id: str,
+        software_name: str,
+        software_version: str,
+        fabric_id: str,
+        system_id: str,
+        description: str | None = None,
+        driver_nodes: list[str] | None = None,
+        properties: dict[str, Any] | None = None,
+        overrideable_properties: list[str] | None = None,
+        allowed_os_users: list[str] | None = None,
+        tags: dict[str, str] | None = None,
+    ) -> Any:
+        """
+        Create or replace the pending version of a connector using PUT.
+
+        Args:
+            id (str): The ID of the connector.
+            software_name (str): The name of the software package.
+            software_version (str): The version of the software package.
+            fabric_id (str): The ID of the fabric this connector belongs to.
+            system_id (str): The ID of the system this connector belongs to.
+            description (str | None): Description of the connector.
+            driver_nodes (list[str] | None): List of node IDs where drivers should be installed.
+            properties (dict | None): Properties to configure the connector.
+            overrideable_properties (list[str] | None): Property names that can be overridden at runtime.
+            allowed_os_users (list[str] | None): OS users allowed to access this connector.
+            tags (dict | None): String key/value pairs for context.
+
+        Returns:
+            dict[str, Any]: The response from the API.
+        """
+        data: dict[str, Any] = {
+            "softwareName": software_name,
+            "softwareVersion": software_version,
+            "fabricId": fabric_id,
+            "systemId": system_id,
+        }
+        if description is not None:
+            data["description"] = description
+        if driver_nodes is not None:
+            data["driverNodes"] = driver_nodes
+        if properties is not None:
+            data["properties"] = properties
+        if overrideable_properties is not None:
+            data["overrideableProperties"] = overrideable_properties
+        if allowed_os_users is not None:
+            data["allowedOSUsers"] = allowed_os_users
+        if tags is not None:
+            data["tags"] = tags
+
+        return self._request("PUT", f"{self.BASE_ENDPOINT}/{id}/pending", json=data)
+
+    def delete_connector_pending(self, id: str) -> Any:
+        """
+        Delete the pending version of a connector.
+
+        Args:
+            id (str): The ID of the connector.
+
+        Returns:
+            dict[str, Any]: The response from the API.
+        """
+        return self._request("DELETE", f"{self.BASE_ENDPOINT}/{id}/pending")
+
+    def delete_connector_previous(self, id: str) -> Any:
+        """
+        Delete the previous version of a connector.
+
+        Args:
+            id (str): The ID of the connector.
+
+        Returns:
+            dict[str, Any]: The response from the API.
+        """
+        return self._request("DELETE", f"{self.BASE_ENDPOINT}/{id}/previous")

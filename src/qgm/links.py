@@ -135,3 +135,206 @@ class LinkClient(BaseClient):
             "tags": tags,
         }
         return self._request("POST", self.BASE_ENDPOINT, json=data)
+
+    def update_link(
+        self, id: str, name: str, description: str | None = None
+    ) -> dict[str, Any]:
+        """Update a link's name and/or description (PATCH).
+
+        Args:
+            id: The ID of the link to update.
+            name: The name of the link (mandatory even for PATCH).
+            description: Optional description of the link.
+
+        Returns:
+            The API response.
+        """
+        data: dict[str, Any] = {"name": name}
+        if self._is_valid_param(description):
+            data["description"] = description
+        return self._request("PATCH", f"{self.BASE_ENDPOINT}/{id}", json=data)
+
+    def update_link_active(self, id: str, version_id: str) -> str:
+        """Activate a pending link version (PATCH with plain text).
+
+        Args:
+            id: The ID of the link wrapper.
+            version_id: The versionId to activate (from pending version).
+
+        Returns:
+            Plain text response confirming the activated versionId.
+        """
+        return self._request(
+            "PATCH",
+            f"{self.BASE_ENDPOINT}/{id}/active",
+            data=version_id,
+            headers={"Content-Type": "text/plain"},
+        )
+
+    def put_link_active(
+        self,
+        id: str,
+        name: str,
+        fabricId: str,
+        initiatorConnectorId: str,
+        targetConnectorId: str,
+        commPolicyId: str,
+        description: str | None = None,
+        initiatorProperties: dict[str, Any] | None = None,
+        overridableInitiatorPropertyNames: list[str] | None = None,
+        initiatorNetworkId: str | None = None,
+        initiatorThreadsPerQuery: int | None = None,
+        targetProperties: dict[str, Any] | None = None,
+        overridableTargetPropertyNames: list[str] | None = None,
+        targetNetworkId: str | None = None,
+        targetThreadsPerQuery: int | None = None,
+        userMappingId: str | None = None,
+        usersToTroubleshoot: dict[str, Any] | None = None,
+        enableAcks: bool | None = None,
+        bridges: list[dict[str, Any]] | None = None,
+        tags: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        """Replace the active link version (PUT).
+
+        Args:
+            id: The ID of the link wrapper.
+            name: The name of the link (mandatory).
+            fabricId: The ID of the fabric.
+            initiatorConnectorId: The ID of the initiating connector.
+            targetConnectorId: The ID of the target connector.
+            commPolicyId: The ID of the communication policy.
+            description: Optional description.
+            initiatorProperties: Optional initiating connector properties.
+            overridableInitiatorPropertyNames: Optional overridable initiator properties.
+            initiatorNetworkId: Optional network ID for initiator.
+            initiatorThreadsPerQuery: Optional threads per query for initiator.
+            targetProperties: Optional target connector properties.
+            overridableTargetPropertyNames: Optional overridable target properties.
+            targetNetworkId: Optional network ID for target.
+            targetThreadsPerQuery: Optional threads per query for target.
+            userMappingId: Optional user mapping ID.
+            usersToTroubleshoot: Optional users to troubleshoot.
+            enableAcks: Optional enable acknowledgments.
+            bridges: Optional bridges configuration.
+            tags: Optional tags.
+
+        Returns:
+            The API response.
+        """
+        data: dict[str, Any] = {
+            "name": name,
+            "fabricId": fabricId,
+            "initiatorConnectorId": initiatorConnectorId,
+            "targetConnectorId": targetConnectorId,
+            "commPolicyId": commPolicyId,
+            "description": description,
+            "initiatorProperties": initiatorProperties,
+            "overridableInitiatorPropertyNames": overridableInitiatorPropertyNames,
+            "initiatorNetworkId": initiatorNetworkId,
+            "initiatorThreadsPerQuery": initiatorThreadsPerQuery,
+            "targetProperties": targetProperties,
+            "overridableTargetPropertyNames": overridableTargetPropertyNames,
+            "targetNetworkId": targetNetworkId,
+            "targetThreadsPerQuery": targetThreadsPerQuery,
+            "userMappingId": userMappingId,
+            "usersToTroubleshoot": usersToTroubleshoot,
+            "enableAcks": enableAcks,
+            "bridges": bridges,
+            "tags": tags,
+        }
+        return self._request("PUT", f"{self.BASE_ENDPOINT}/{id}/active", json=data)
+
+    def put_link_pending(
+        self,
+        id: str,
+        name: str,
+        fabricId: str,
+        initiatorConnectorId: str,
+        targetConnectorId: str,
+        commPolicyId: str,
+        description: str | None = None,
+        initiatorProperties: dict[str, Any] | None = None,
+        overridableInitiatorPropertyNames: list[str] | None = None,
+        initiatorNetworkId: str | None = None,
+        initiatorThreadsPerQuery: int | None = None,
+        targetProperties: dict[str, Any] | None = None,
+        overridableTargetPropertyNames: list[str] | None = None,
+        targetNetworkId: str | None = None,
+        targetThreadsPerQuery: int | None = None,
+        userMappingId: str | None = None,
+        usersToTroubleshoot: dict[str, Any] | None = None,
+        enableAcks: bool | None = None,
+        bridges: list[dict[str, Any]] | None = None,
+        tags: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        """Create or replace a pending link version (PUT).
+
+        Args:
+            id: The ID of the link wrapper.
+            name: The name of the link (mandatory).
+            fabricId: The ID of the fabric.
+            initiatorConnectorId: The ID of the initiating connector.
+            targetConnectorId: The ID of the target connector.
+            commPolicyId: The ID of the communication policy.
+            description: Optional description.
+            initiatorProperties: Optional initiating connector properties.
+            overridableInitiatorPropertyNames: Optional overridable initiator properties.
+            initiatorNetworkId: Optional network ID for initiator.
+            initiatorThreadsPerQuery: Optional threads per query for initiator.
+            targetProperties: Optional target connector properties.
+            overridableTargetPropertyNames: Optional overridable target properties.
+            targetNetworkId: Optional network ID for target.
+            targetThreadsPerQuery: Optional threads per query for target.
+            userMappingId: Optional user mapping ID.
+            usersToTroubleshoot: Optional users to troubleshoot.
+            enableAcks: Optional enable acknowledgments.
+            bridges: Optional bridges configuration.
+            tags: Optional tags.
+
+        Returns:
+            The API response.
+        """
+        data: dict[str, Any] = {
+            "name": name,
+            "fabricId": fabricId,
+            "initiatorConnectorId": initiatorConnectorId,
+            "targetConnectorId": targetConnectorId,
+            "commPolicyId": commPolicyId,
+            "description": description,
+            "initiatorProperties": initiatorProperties,
+            "overridableInitiatorPropertyNames": overridableInitiatorPropertyNames,
+            "initiatorNetworkId": initiatorNetworkId,
+            "initiatorThreadsPerQuery": initiatorThreadsPerQuery,
+            "targetProperties": targetProperties,
+            "overridableTargetPropertyNames": overridableTargetPropertyNames,
+            "targetNetworkId": targetNetworkId,
+            "targetThreadsPerQuery": targetThreadsPerQuery,
+            "userMappingId": userMappingId,
+            "usersToTroubleshoot": usersToTroubleshoot,
+            "enableAcks": enableAcks,
+            "bridges": bridges,
+            "tags": tags,
+        }
+        return self._request("PUT", f"{self.BASE_ENDPOINT}/{id}/pending", json=data)
+
+    def delete_link_pending(self, id: str) -> dict[str, Any]:
+        """Delete the pending link version.
+
+        Args:
+            id: The ID of the link wrapper.
+
+        Returns:
+            The API response.
+        """
+        return self._request("DELETE", f"{self.BASE_ENDPOINT}/{id}/pending")
+
+    def delete_link_previous(self, id: str) -> dict[str, Any]:
+        """Delete the previous link version.
+
+        Args:
+            id: The ID of the link wrapper.
+
+        Returns:
+            The API response.
+        """
+        return self._request("DELETE", f"{self.BASE_ENDPOINT}/{id}/previous")

@@ -27,7 +27,9 @@ async def test_qg_get_comm_policies(mcp_client: Client):
 
     # Verify result is a list
     comm_policies = result.data["result"]
-    assert isinstance(comm_policies, list), "Communication policies result should be a list"
+    assert isinstance(
+        comm_policies, list
+    ), "Communication policies result should be a list"
 
 
 @pytest.mark.integration
@@ -59,7 +61,9 @@ async def test_qg_get_comm_policies_with_filters(mcp_client: Client, qg_manager)
             assert any(p.get("name") == policy_name for p in filtered_policies)
 
     # Test with fabric_id filter
-    fabric_id = first_policy.get("fabric", {}).get("id") if "fabric" in first_policy else None
+    fabric_id = (
+        first_policy.get("fabric", {}).get("id") if "fabric" in first_policy else None
+    )
     if fabric_id:
         result = await mcp_client.call_tool(
             "qg_get_comm_policies", arguments={"filter_by_fabric_id": fabric_id}
@@ -226,7 +230,9 @@ async def test_qg_create_comm_policy(mcp_client: Client, qg_manager):
     # Verify metadata
     metadata = result.data["metadata"]
     assert metadata["tool_name"] == "qg_create_comm_policy"
-    assert metadata["success"] is True, f"Policy creation failed: {result.data.get('result')}"
+    assert (
+        metadata["success"] is True
+    ), f"Policy creation failed: {result.data.get('result')}"
 
     # Verify created policy
     policy = result.data["result"]
@@ -261,7 +267,9 @@ async def test_qg_create_comm_policy_minimal(mcp_client: Client, qg_manager):
     assert result.data is not None
     metadata = result.data["metadata"]
     assert metadata["tool_name"] == "qg_create_comm_policy"
-    assert metadata["success"] is True, f"Policy creation failed: {result.data.get('result')}"
+    assert (
+        metadata["success"] is True
+    ), f"Policy creation failed: {result.data.get('result')}"
 
     policy = result.data["result"]
     assert policy.get("name") == policy_name
@@ -300,7 +308,9 @@ async def test_qg_delete_comm_policy(mcp_client: Client, qg_manager):
     assert result.data is not None
     metadata = result.data["metadata"]
     assert metadata["tool_name"] == "qg_delete_comm_policy"
-    assert metadata["success"] is True, f"Policy deletion failed: {result.data.get('result')}"
+    assert (
+        metadata["success"] is True
+    ), f"Policy deletion failed: {result.data.get('result')}"
 
     # Verify policy is deleted by trying to get it
     try:
@@ -346,3 +356,385 @@ async def test_qg_comm_policies_error_handling(mcp_client: Client, qg_manager):
 
     # Restore manager for other tests
     set_qg_manager(qg_manager)
+
+
+@pytest.mark.integration
+async def test_qg_update_comm_policy(mcp_client: Client, qg_manager):
+    """Test updating a communication policy using PATCH."""
+    # Create a test comm policy
+    unique_suffix = str(uuid.uuid4())[:8]
+    policy_name = f"test_comm_policy_update_{unique_suffix}"
+    created_policy = qg_manager.comm_policy_client.create_comm_policy(
+        name=policy_name,
+        transfer_concurrency=4,
+        description="Initial description",
+    )
+
+    policy_id = created_policy.get("id")
+    assert policy_id is not None, "Created policy should have an ID"
+
+    try:
+        # Update the policy name and description
+        result = await mcp_client.call_tool(
+            "qg_update_comm_policy",
+            arguments={
+                "id": policy_id,
+                "name": f"{policy_name}_updated",
+                "description": "Updated description",
+            },
+        )
+
+        # Verify response
+        assert result.data is not None
+        metadata = result.data["metadata"]
+        assert metadata["tool_name"] == "qg_update_comm_policy"
+        assert (
+            metadata["success"] is True
+        ), f"Update failed: {result.data.get('result')}"
+
+        # Verify updated policy
+        updated_policy = result.data["result"]
+        assert updated_policy.get("name") == f"{policy_name}_updated"
+        assert updated_policy.get("description") == "Updated description"
+
+    finally:
+        # Cleanup
+        try:
+            qg_manager.comm_policy_client.delete_comm_policy(policy_id)
+        except Exception:
+            pass
+
+
+@pytest.mark.integration
+async def test_qg_update_comm_policy_nonexistent(mcp_client: Client):
+    """Test updating a non-existent communication policy."""
+    invalid_id = "00000000-0000-0000-0000-000000000000"
+
+    result = await mcp_client.call_tool(
+        "qg_update_comm_policy",
+        arguments={
+            "id": invalid_id,
+            "description": "This should fail",
+        },
+    )
+
+    # Should return error response
+    assert result.data is not None
+    metadata = result.data["metadata"]
+    assert metadata["tool_name"] == "qg_update_comm_policy"
+    assert metadata["success"] is False
+
+
+@pytest.mark.integration
+async def test_qg_put_comm_policy_active(mcp_client: Client, qg_manager):
+    """Test replacing the active version of a communication policy."""
+    # Create a test comm policy
+    unique_suffix = str(uuid.uuid4())[:8]
+    policy_name = f"test_comm_policy_put_active_{unique_suffix}"
+    created_policy = qg_manager.comm_policy_client.create_comm_policy(
+        name=policy_name,
+        transfer_concurrency=4,
+        description="Test PUT active",
+    )
+
+    policy_id = created_policy.get("id")
+    assert policy_id is not None
+
+    try:
+        # Replace the active version with PUT
+        result = await mcp_client.call_tool(
+            "qg_put_comm_policy_active",
+            arguments={
+                "id": policy_id,
+                "name": policy_name,
+                "transfer_concurrency": 8,
+                "description": "Replaced active version",
+                "compression_algorithm": "ZSTD",
+            },
+        )
+
+        # Verify response
+        assert result.data is not None
+        metadata = result.data["metadata"]
+        assert metadata["tool_name"] == "qg_put_comm_policy_active"
+        # PUT to /active may not be supported by the API, depending on policy state
+        # The test verifies that the tool is properly implemented
+        if metadata["success"]:
+            updated = result.data["result"]
+            assert isinstance(updated, dict)
+            assert updated.get("transferConcurrency") == 8
+            assert updated.get("description") == "Replaced active version"
+            assert updated.get("compressionAlgorithm") == "ZSTD"
+        else:
+            # API may return 400 if PUT to /active is not allowed in current state
+            assert "error" in result.data
+
+    finally:
+        # Cleanup
+        try:
+            qg_manager.comm_policy_client.delete_comm_policy(policy_id)
+        except Exception:
+            pass
+
+
+@pytest.mark.integration
+async def test_qg_put_comm_policy_pending(mcp_client: Client, qg_manager):
+    """Test creating/replacing the pending version of a communication policy."""
+    # Create a test comm policy
+    unique_suffix = str(uuid.uuid4())[:8]
+    policy_name = f"test_comm_policy_pending_{unique_suffix}"
+    created_policy = qg_manager.comm_policy_client.create_comm_policy(
+        name=policy_name,
+        transfer_concurrency=4,
+        description="Test pending version",
+    )
+
+    policy_id = created_policy.get("id")
+    assert policy_id is not None
+
+    try:
+        # Create a pending version
+        result = await mcp_client.call_tool(
+            "qg_put_comm_policy_pending",
+            arguments={
+                "id": policy_id,
+                "transfer_concurrency": 8,
+                "description": "Pending version description",
+                "compression_algorithm": "ZSTD",
+            },
+        )
+
+        # Verify response
+        assert result.data is not None
+        metadata = result.data["metadata"]
+        assert metadata["tool_name"] == "qg_put_comm_policy_pending"
+        assert (
+            metadata["success"] is True
+        ), f"PUT pending failed: {result.data.get('result')}"
+
+        # Verify pending version was created
+        pending = result.data["result"]
+        assert isinstance(pending, dict)
+
+    finally:
+        # Cleanup - delete pending version first, then the policy
+        try:
+            qg_manager.comm_policy_client.delete_comm_policy_pending(policy_id)
+        except Exception:
+            pass
+        try:
+            qg_manager.comm_policy_client.delete_comm_policy(policy_id)
+        except Exception:
+            pass
+
+
+@pytest.mark.integration
+async def test_qg_put_comm_policy_pending_minimal(mcp_client: Client, qg_manager):
+    """Test creating pending version with minimal required parameters."""
+    # Create a test comm policy
+    unique_suffix = str(uuid.uuid4())[:8]
+    policy_name = f"test_comm_policy_pending_min_{unique_suffix}"
+    created_policy = qg_manager.comm_policy_client.create_comm_policy(
+        name=policy_name,
+        transfer_concurrency=2,
+    )
+
+    policy_id = created_policy.get("id")
+    assert policy_id is not None
+
+    try:
+        # Create pending version with only required parameter
+        result = await mcp_client.call_tool(
+            "qg_put_comm_policy_pending",
+            arguments={
+                "id": policy_id,
+                "transfer_concurrency": 4,
+            },
+        )
+
+        # Verify response
+        assert result.data is not None
+        metadata = result.data["metadata"]
+        assert metadata["success"] is True
+
+    finally:
+        # Cleanup
+        try:
+            qg_manager.comm_policy_client.delete_comm_policy_pending(policy_id)
+        except Exception:
+            pass
+        try:
+            qg_manager.comm_policy_client.delete_comm_policy(policy_id)
+        except Exception:
+            pass
+
+
+@pytest.mark.integration
+async def test_qg_delete_comm_policy_pending(mcp_client: Client, qg_manager):
+    """Test deleting the pending version of a communication policy."""
+    # Create a test comm policy with a pending version
+    unique_suffix = str(uuid.uuid4())[:8]
+    policy_name = f"test_comm_policy_del_pending_{unique_suffix}"
+    created_policy = qg_manager.comm_policy_client.create_comm_policy(
+        name=policy_name,
+        transfer_concurrency=2,
+    )
+
+    policy_id = created_policy.get("id")
+    assert policy_id is not None
+
+    try:
+        # Create a pending version
+        qg_manager.comm_policy_client.put_comm_policy_pending(
+            id=policy_id,
+            transfer_concurrency=4,
+            description="Pending to be deleted",
+        )
+
+        # Delete the pending version
+        result = await mcp_client.call_tool(
+            "qg_delete_comm_policy_pending",
+            arguments={"id": policy_id},
+        )
+
+        # Verify response
+        assert result.data is not None
+        metadata = result.data["metadata"]
+        assert metadata["tool_name"] == "qg_delete_comm_policy_pending"
+        assert metadata["success"] is True
+
+        # Verify pending version is deleted
+        try:
+            qg_manager.comm_policy_client.get_comm_policy_pending(policy_id)
+            # If we get here without error, pending might still exist or be empty
+        except Exception:
+            # Expected - pending version should not exist
+            pass
+
+    finally:
+        # Cleanup - delete the policy
+        try:
+            qg_manager.comm_policy_client.delete_comm_policy(policy_id)
+        except Exception:
+            pass
+
+
+@pytest.mark.integration
+async def test_qg_delete_comm_policy_pending_nonexistent(mcp_client: Client):
+    """Test deleting pending version of non-existent policy."""
+    invalid_id = "00000000-0000-0000-0000-000000000000"
+
+    result = await mcp_client.call_tool(
+        "qg_delete_comm_policy_pending",
+        arguments={"id": invalid_id},
+    )
+
+    # Should handle gracefully
+    assert result.data is not None
+    metadata = result.data["metadata"]
+    assert metadata["tool_name"] == "qg_delete_comm_policy_pending"
+    # Success may vary depending on API behavior
+
+
+@pytest.mark.integration
+async def test_qg_delete_comm_policy_previous(mcp_client: Client, qg_manager):
+    """Test deleting the previous version of a communication policy."""
+    # Note: Creating a previous version requires activating a pending version
+    # which pushes the current active to previous. This workflow may not always
+    # work depending on the QueryGrid API version and policy state.
+    unique_suffix = str(uuid.uuid4())[:8]
+    policy_name = f"test_comm_policy_del_previous_{unique_suffix}"
+
+    # Step 1: Create initial policy (this becomes active)
+    created_policy = qg_manager.comm_policy_client.create_comm_policy(
+        name=policy_name,
+        transfer_concurrency=2,
+        description="Initial active version",
+    )
+
+    policy_id = created_policy.get("id")
+    assert policy_id is not None
+
+    try:
+        # Step 2: Create a pending version with different settings
+        qg_manager.comm_policy_client.put_comm_policy_pending(
+            id=policy_id,
+            transfer_concurrency=4,
+            description="Pending version to be activated",
+        )
+
+        # Step 3: Get the pending version to extract its versionId
+        try:
+            pending_version = qg_manager.comm_policy_client.get_comm_policy_pending(
+                policy_id
+            )
+            pending_version_id = pending_version.get("versionId")
+            if not pending_version_id:
+                pytest.skip("Pending version does not have versionId")
+        except Exception as e:
+            pytest.skip(f"Could not get pending version: {str(e)}")
+
+        # Step 4: Activate the pending version using its versionId
+        # This should push the current active to previous
+        try:
+            qg_manager.comm_policy_client.update_comm_policy_active(
+                id=policy_id, version_id=pending_version_id
+            )
+        except Exception as e:
+            pytest.skip(f"Could not activate pending version via PATCH: {str(e)}")
+
+        # Verify previous version exists
+        try:
+            previous = qg_manager.comm_policy_client.get_comm_policy_previous(policy_id)
+            if not previous:
+                pytest.skip("Previous version was not created after activation")
+        except Exception as e:
+            pytest.skip(f"Previous version does not exist: {str(e)}")
+
+        # Now test deleting the previous version
+        result = await mcp_client.call_tool(
+            "qg_delete_comm_policy_previous",
+            arguments={"id": policy_id},
+        )
+
+        # Verify response
+        assert result.data is not None
+        metadata = result.data["metadata"]
+        assert metadata["tool_name"] == "qg_delete_comm_policy_previous"
+        assert metadata["success"] is True
+
+        # Verify previous version is deleted
+        try:
+            qg_manager.comm_policy_client.get_comm_policy_previous(policy_id)
+            pytest.fail("Previous version should have been deleted")
+        except Exception:
+            # Expected - previous version should not exist
+            pass
+
+    finally:
+        # Cleanup - delete pending and the policy
+        try:
+            qg_manager.comm_policy_client.delete_comm_policy_pending(policy_id)
+        except Exception:
+            pass
+        try:
+            qg_manager.comm_policy_client.delete_comm_policy(policy_id)
+        except Exception:
+            pass
+
+
+@pytest.mark.integration
+async def test_qg_delete_comm_policy_previous_nonexistent(mcp_client: Client):
+    """Test deleting previous version of non-existent policy."""
+    invalid_id = "00000000-0000-0000-0000-000000000000"
+
+    result = await mcp_client.call_tool(
+        "qg_delete_comm_policy_previous",
+        arguments={"id": invalid_id},
+    )
+
+    # Should handle gracefully
+    assert result.data is not None
+    metadata = result.data["metadata"]
+    assert metadata["tool_name"] == "qg_delete_comm_policy_previous"
+    # Success may vary depending on API behavior

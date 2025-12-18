@@ -17,13 +17,17 @@ def qg_get_datacenters(filter_by_name: str | None = None) -> dict[str, Any]:
     """
     Get details of all QueryGrid datacenters.
 
+    ALL PARAMETERS ARE OPTIONAL. If the user does not specify filters, retrieve all datacenters.
+
     Args:
-        filter_by_name (str | None): [Optional] Filter datacenters by name
+        filter_by_name (str | None): [OPTIONAL] Filter datacenters by name
 
     Returns:
         ResponseType: formatted response with operation results + metadata
     """
-    logger.debug("Tool: qg_get_datacenters called with filter_by_name=%s", filter_by_name)
+    logger.debug(
+        "Tool: qg_get_datacenters called with filter_by_name=%s", filter_by_name
+    )
 
     def _call():
         qg_manager = tools.get_qg_manager()
@@ -43,9 +47,12 @@ def qg_get_datacenter_by_id(
     """
     Get a specific QueryGrid datacenter by ID.
 
+    MANDATORY PARAMETER: Ask the user for the datacenter ID if not provided.
+
     Args:
-        id (str): The ID of the datacenter to retrieve. ID is in UUID format.
+        id (str): [MANDATORY] The ID of the datacenter to retrieve. ID is in UUID format.
             e.g., '123e4567-e89b-12d3-a456-426614174000'.
+            If the user doesn't know the ID, suggest using qg_get_datacenters to list all datacenters.
 
     Returns:
         ResponseType: formatted response with operation results + metadata
@@ -70,10 +77,20 @@ def qg_create_datacenter(
     """
     Create a new data center in QueryGrid Manager.
 
+    MANDATORY PARAMETER: Ask the user for 'name' if not provided.
+    OPTIONAL PARAMETERS: 'description' and 'tags' can be omitted.
+
+    ⚠️ CRITICAL GOTCHAS FOR LLMs:
+    1. Duplicate datacenter names may or may not be allowed depending on QGM configuration
+    2. It's best practice to use unique names to avoid confusion
+
     Args:
-        name (str): The name of the data center.
-        description (str | None): Optional description of the data center.
-        tags (dict[str, Any] | None): Optional string key/value pairs for associating some context with the data center.
+        name (str): [MANDATORY] The name of the data center.
+            Ask the user: "What would you like to name the data center?"
+            Should preferably be unique.
+        description (str | None): [OPTIONAL] Description of the data center.
+        tags (dict[str, Any] | None): [OPTIONAL] String key/value pairs for associating some context
+            with the data center.
 
     Returns:
         ResponseType: formatted response with operation results + metadata
@@ -99,15 +116,67 @@ def qg_create_datacenter(
 
 
 @mcp.tool
+def qg_update_datacenter(
+    id: str,
+    name: str,
+    description: str | None = None,
+    tags: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """
+    Update a data center using PUT (full replacement).
+
+    MANDATORY PARAMETERS: Ask the user for 'id' and 'name' if not provided.
+    OPTIONAL PARAMETERS: 'description' and 'tags' can be omitted.
+
+    Args:
+        id (str): [MANDATORY] The ID of the data center to update. ID is in UUID format.
+            e.g., '123e4567-e89b-12d3-a456-426614174000'.
+            If the user doesn't know the ID, suggest using qg_get_datacenters to list all datacenters.
+        name (str): [MANDATORY] The name of the data center.
+        description (str | None): [OPTIONAL] Description of the data center.
+        tags (dict[str, Any] | None): [OPTIONAL] String key/value pairs for associating some context
+            with the data center.
+
+    Returns:
+        ResponseType: formatted response with operation results + metadata
+    """
+    logger.debug(
+        "Tool: qg_update_datacenter called with id=%s, name=%s, description=%s, tags=%s",
+        id,
+        name,
+        description,
+        tags,
+    )
+
+    def _call():
+        qg_manager = tools.get_qg_manager()
+        if qg_manager is None:
+            raise RuntimeError("QueryGridManager is not initialized")
+        return qg_manager.datacenter_client.update_datacenter(
+            id=id,
+            name=name,
+            description=description,
+            tags=tags,
+        )
+
+    return run_tool("qg_update_datacenter", _call)
+
+
+@mcp.tool
 def qg_delete_datacenter(
     id: str,
 ) -> dict[str, Any]:
     """
-    Delete a data center by ID.
+    Delete a SINGLE data center by ID.
+
+    Use this tool to delete ONE data center at a time. For deleting multiple data centers at once, do NOT use this tool.
+
+    MANDATORY PARAMETER: Ask the user for the datacenter ID if not provided.
 
     Args:
-        id (str): The ID of the data center to delete. ID is in UUID format.
+        id (str): [MANDATORY] The ID of the data center to delete. ID is in UUID format.
             e.g., '123e4567-e89b-12d3-a456-426614174000'.
+            If the user doesn't know the ID, suggest using qg_get_datacenters to list all datacenters.
 
     Returns:
         ResponseType: formatted response with operation results + metadata

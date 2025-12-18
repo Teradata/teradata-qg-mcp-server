@@ -46,3 +46,19 @@ class NodeVirtualIPClient(BaseClient):
             dict[str, Any]: The deletion response.
         """
         return self._request("DELETE", f"{self.BASE_ENDPOINT}/{id}")
+
+    def put_node_virtual_ip(
+        self, id: str, virtual_ips: list[dict[str, str]]
+    ) -> dict[str, Any]:
+        """
+        Update node virtual IPs by ID.
+
+        Args:
+            id (str): The node ID that should match an existing QgNode object.
+            virtual_ips (list[dict[str, str]]): Array of virtual IP objects with 'name' and 'address' keys.
+
+        Returns:
+            dict[str, Any]: The updated node virtual IP details.
+        """
+        payload = {"networkInterfaces": virtual_ips}
+        return self._request("PUT", f"{self.BASE_ENDPOINT}/{id}", json=payload)

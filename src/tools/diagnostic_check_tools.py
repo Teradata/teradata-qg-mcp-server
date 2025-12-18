@@ -23,14 +23,18 @@ def qg_run_diagnostic_check(
     """
     Run a diagnostic check or connector install.
 
+    MANDATORY PARAMETER: Ask the user for 'type' if not provided.
+    OPTIONAL PARAMETERS: All other parameters can be omitted depending on the check type.
+
     Args:
-        type (str): Type of diagnostic check (LINK, LINK_BANDWIDTH, CONNECTOR, CONNECTOR_INSTALL).
-        component_id (str | None): Id of the link or connector to check.
-        data_flow (str | None): Data flow direction.
-        node_id (str | None): Id of the node.
-        version (str | None): Version to use.
-        bandwidth_mb_per_node (float | None): Bandwidth in MB per node.
-        properties (str | None): Additional properties as JSON string.
+        type (str): [MANDATORY] Type of diagnostic check (LINK, LINK_BANDWIDTH, CONNECTOR, CONNECTOR_INSTALL).
+            Ask the user: "What type of diagnostic check would you like to run?"
+        component_id (str | None): [OPTIONAL] Id of the link or connector to check. ID is in UUID format.
+        data_flow (str | None): [OPTIONAL] Data flow direction.
+        node_id (str | None): [OPTIONAL] Id of the node. ID is in UUID format.
+        version (str | None): [OPTIONAL] Version to use.
+        bandwidth_mb_per_node (float | None): [OPTIONAL] Bandwidth in MB per node.
+        properties (str | None): [OPTIONAL] Additional properties as JSON string.
 
     Returns:
         ResponseType: formatted response with operation results + metadata
@@ -61,8 +65,12 @@ def qg_get_diagnostic_check_status(
     """
     Get the status of a QueryGrid diagnostic check.
 
+    MANDATORY PARAMETER: Ask the user for the diagnostic check ID if not provided.
+
     Args:
-        id (str): The ID of the diagnostic check. ID is in UUID format. e.g., '123e4567-e89b-12d3-a456-426614174000'.
+        id (str): [MANDATORY] The ID of the diagnostic check. ID is in UUID format.
+            e.g., '123e4567-e89b-12d3-a456-426614174000'
+            Use qg_run_diagnostic_check to initiate a check and get an ID.
 
     Returns:
         ResponseType: formatted response with operation results + metadata

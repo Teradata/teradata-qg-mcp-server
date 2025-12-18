@@ -17,9 +17,11 @@ def qg_get_managers(extra_info: bool = False, filter_by_name: str | None = None)
     """
     Get details of all QueryGrid managers.
 
+    ALL PARAMETERS ARE OPTIONAL. If the user does not specify filters, retrieve all managers.
+
     Args:
-        extra_info (bool): Include extra information. Values are boolean True/False, not string.
-        filter_by_name (str | None): [Optional] Get manager associated with the specified hostname
+        extra_info (bool): [OPTIONAL] Include extra information. Values are boolean True/False, not string.
+        filter_by_name (str | None): [OPTIONAL] Get manager associated with the specified hostname
             (case insensitive). Wildcard matching with '*' is supported.
 
     Returns:
@@ -43,11 +45,14 @@ def qg_get_managers(extra_info: bool = False, filter_by_name: str | None = None)
 @mcp.tool
 def qg_get_manager_by_id(id: str) -> dict[str, Any]:
     """
-
     Get a specific QueryGrid manager by ID.
 
+    MANDATORY PARAMETER: Ask the user for the manager ID if not provided.
+
     Args:
-        id (str): The ID of the manager to retrieve. ID is in UUID format.
+        id (str): [MANDATORY] The ID of the manager to retrieve. ID is in UUID format.
+            e.g., '123e4567-e89b-12d3-a456-426614174000'
+            If the user doesn't know the ID, suggest using qg_get_managers to list all managers.
 
     Returns:
         ResponseType: formatted response with operation results + metadata

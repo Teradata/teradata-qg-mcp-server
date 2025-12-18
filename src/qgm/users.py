@@ -45,7 +45,9 @@ class UserClient(BaseClient):
         api_endpoint = f"{self.BASE_ENDPOINT}/{username}"
         return self._request("DELETE", api_endpoint)
 
-    def create_user(self, username: str, password: str, description: str | None = None) -> Any:
+    def create_user(
+        self, username: str, password: str, description: str | None = None
+    ) -> Any:
         """Create a new user in QueryGrid Manager.
 
         Args:
@@ -64,3 +66,24 @@ class UserClient(BaseClient):
         if description is not None:
             data["description"] = description
         return self._request("POST", api_endpoint, json=data)
+
+    def update_user(
+        self, username: str, password: str, description: str | None = None
+    ) -> Any:
+        """Update an existing user in QueryGrid Manager.
+
+        Args:
+            username: The username of the user to update.
+            password: The password for the user (required by API).
+            description: Optional new description of the user.
+
+        Returns:
+            The API response parsed as JSON.
+        """
+        api_endpoint = f"{self.BASE_ENDPOINT}/{username}"
+        data: dict[str, Any] = {
+            "password": password,
+        }
+        if description is not None:
+            data["description"] = description
+        return self._request("PUT", api_endpoint, json=data)
