@@ -4,7 +4,7 @@ A Model Context Protocol (MCP) server built with FastMCP that provides comprehen
 
 ## Features
 
-- **Comprehensive QueryGrid Management**: 70+ tools covering all major QueryGrid operations
+- **Comprehensive QueryGrid Management**: 126 tools covering all major QueryGrid operations
 - **Secure Authentication**: Basic authentication support for QueryGrid Manager
 - **RESTful API Integration**: Full CRUD operations for QueryGrid resources
 - **Streamable HTTP Transport**: Efficient bidirectional communication using FastMCP
@@ -20,7 +20,7 @@ A Model Context Protocol (MCP) server built with FastMCP that provides comprehen
 teradata-qg-mcp-server/
 ├── src/
 │   ├── mcp_server.py          # FastMCP application and server initialization
-│   ├── server.py              # Main server entry point
+│   ├── server.py              # Main server entry point with graceful shutdown
 │   ├── utils.py               # Shared utilities and helpers
 │   ├── qgm/                   # QueryGrid Manager API clients
 │   │   ├── base.py            # Base HTTP client
@@ -30,7 +30,7 @@ teradata-qg-mcp-server/
 │   │   ├── links.py           # Links API client
 │   │   ├── fabrics.py         # Fabrics API client
 │   │   └── ...                # Other resource clients
-│   └── tools/                 # MCP tool implementations (21 modules)
+│   └── tools/                 # MCP tool implementations (21 modules, 126 tools)
 │       ├── __init__.py        # Tool registration
 │       ├── system_tools.py    # System management tools
 │       ├── connector_tools.py # Connector management tools
@@ -426,9 +426,10 @@ source venv/bin/activate
 
 **Signal Handling:**
 - Custom SIGINT (Ctrl+C) and SIGTERM handlers
+- Graceful shutdown with 5-second timeout
 - Process tree detection with `pgrep -P <pid>`
 - Kills all child processes before parent
-- Immediate termination with `os._exit(0)`
+- Proper session cleanup (QueryGrid Manager connection closed)
 - PID file cleanup on shutdown
 
 **Multi-Instance Safety:**
@@ -500,7 +501,47 @@ This configuration uses the **streamable-http** transport protocol for efficient
 
 ## Available Tools
 
-The server provides **70+ tools** organized by QueryGrid resource type. All tools follow consistent patterns and return formatted responses with operation results and metadata.
+The server provides **126 tools** organized by QueryGrid resource type. All tools follow consistent patterns and return formatted responses with operation results and metadata.
+
+### Tool Categories
+
+- **Get/Read Operations (55 tools)**: Retrieve information about QueryGrid resources
+- **Create Operations (12 tools)**: Create new QueryGrid entities with comprehensive validation
+- **Update/Patch Operations (10 tools)**: Modify existing resources
+- **Put Operations (14 tools)**: Full replacement of resource configurations  
+- **Delete Operations (28 tools)**: Remove individual entities
+- **Run/Execute Operations (4 tools)**: Execute queries, operations, and diagnostic checks
+- **Bulk Operations (1 tool)**: Bulk delete nodes or issues
+- **System Management (1 tool)**: Apply or revert pending configuration changes
+
+### Important Notes on Delete Operations
+
+#### Individual Delete Tools
+All `qg_delete_*` tools (except `qg_bulk_delete`) are designed to delete **ONE entity at a time**. Each tool accepts a single entity ID and removes that specific resource from QueryGrid Manager.
+
+Examples:
+- `qg_delete_system(id)` - Deletes a single system
+- `qg_delete_connector(id)` - Deletes a single connector
+- `qg_delete_bridge(id)` - Deletes a single bridge
+
+**Do NOT use these tools to delete multiple entities** - use the bulk delete tool instead.
+
+#### Bulk Delete Tool
+The `qg_bulk_delete(config_type, ids)` tool is specifically designed for bulk deletion operations, but **only supports two entity types**:
+- `NODE` - Bulk delete multiple nodes
+- `ISSUE` - Bulk delete multiple issues
+
+**This tool CANNOT be used for other entity types** like systems, connectors, bridges, etc. For those resources, use their individual delete tools.
+
+#### Create Tool Edge Cases
+All create tools include comprehensive validation and edge case documentation derived from integration tests. Each tool's description contains:
+- **⚠️ CRITICAL GOTCHAS FOR LLMs**: Common mistakes to avoid
+- Required field validation rules
+- Dependency requirements
+- Duplicate handling behavior
+- Enum value constraints
+
+Review each create tool's documentation carefully before use to avoid validation errors.
 
 ### Core Management Tools
 
@@ -512,9 +553,11 @@ The server provides **70+ tools** organized by QueryGrid resource type. All tool
 - `qg_get_manager_by_id(id, extra_info)`: Get specific manager details
 
 #### Datacenter Tools
-- `qg_get_datacenters()`: Get all datacenters
+- `qg_get_datacenters(filter_by_name)`: Get all datacenters
 - `qg_get_datacenter_by_id(id)`: Get specific datacenter
 - `qg_create_datacenter(name, description, tags)`: Create new datacenter
+- `qg_update_datacenter(id, name, description, tags)`: Update datacenter
+- `qg_delete_datacenter(id)`: Delete a single datacenter
 
 ### System Management
 
@@ -522,11 +565,15 @@ The server provides **70+ tools** organized by QueryGrid resource type. All tool
 - `qg_get_systems(extra_info, filter_by_name)`: Get all systems with filtering
 - `qg_get_system_by_id(id, extra_info)`: Get specific system details
 - `qg_create_system(name, system_type, platform_type, ...)`: Create new system
+- `qg_update_system(id, ...)`: Update existing system
+- `qg_put_system(id, ...)`: Replace system configuration
+- `qg_delete_system(id)`: Delete a single system
 
 #### Node Tools
 - `qg_get_nodes(...)`: Get nodes with extensive filtering options
 - `qg_get_node_by_id(id, extra_info)`: Get specific node details
 - `qg_get_node_heartbeat_by_id(id)`: Get node heartbeat status
+- `qg_delete_node(id)`: Delete a single node
 
 #### Node Virtual IP Tools
 - `qg_get_node_virtual_ips()`: Get all node virtual IPs
@@ -542,6 +589,11 @@ The server provides **70+ tools** organized by QueryGrid resource type. All tool
 - `qg_get_connector_previous(id)`: Get previous configuration
 - `qg_get_connector_drivers(id)`: Get connector driver information
 - `qg_create_connector(name, connector_type, ...)`: Create new connector
+- `qg_update_connector(id, ...)`: Update existing connector
+- `qg_put_connector(id, ...)`: Replace connector configuration
+- `qg_delete_connector(id)`: Delete a single connector
+- `qg_delete_connector_active(id)`: Delete active connector configuration
+- `qg_delete_connector_pending(id)`: Delete pending connector configuration
 
 #### Link Tools
 - `qg_get_links(extra_info, filter_by_name)`: Get all links
@@ -550,6 +602,11 @@ The server provides **70+ tools** organized by QueryGrid resource type. All tool
 - `qg_get_link_pending(id)`: Get pending configuration
 - `qg_get_link_previous(id)`: Get previous configuration
 - `qg_create_link(name, initiator_id, target_id, ...)`: Create new link
+- `qg_update_link(id, ...)`: Update existing link
+- `qg_put_link(id, ...)`: Replace link configuration
+- `qg_delete_link(id)`: Delete a single link
+- `qg_delete_link_active(id)`: Delete active link configuration
+- `qg_delete_link_pending(id)`: Delete pending link configuration
 
 #### Fabric Tools
 - `qg_get_fabrics(extra_info, filter_by_name)`: Get all fabrics
@@ -558,11 +615,18 @@ The server provides **70+ tools** organized by QueryGrid resource type. All tool
 - `qg_get_fabric_pending(id)`: Get pending configuration
 - `qg_get_fabric_previous(id)`: Get previous configuration
 - `qg_create_fabric(name, datacenter_id, ...)`: Create new fabric
+- `qg_update_fabric(id, ...)`: Update existing fabric
+- `qg_put_fabric(id, ...)`: Replace fabric configuration
+- `qg_delete_fabric(id)`: Delete a single fabric
+- `qg_delete_fabric_active(id)`: Delete active fabric configuration
+- `qg_delete_fabric_pending(id)`: Delete pending fabric configuration
 
 #### Bridge Tools
 - `qg_get_bridges(extra_info, filter_by_name)`: Get all bridges
 - `qg_get_bridge_by_id(id, extra_info)`: Get specific bridge
 - `qg_create_bridge(name, ...)`: Create new bridge
+- `qg_update_bridge(id, ...)`: Update existing bridge
+- `qg_delete_bridge(id)`: Delete a single bridge
 
 #### Network Tools
 - `qg_get_networks(extra_info, filter_by_name)`: Get all networks
@@ -570,6 +634,12 @@ The server provides **70+ tools** organized by QueryGrid resource type. All tool
 - `qg_get_network_active(id)`: Get active network configuration
 - `qg_get_network_pending(id)`: Get pending configuration
 - `qg_get_network_previous(id)`: Get previous configuration
+- `qg_create_network(name, ...)`: Create new network
+- `qg_update_network(id, ...)`: Update existing network
+- `qg_put_network(id, ...)`: Replace network configuration
+- `qg_delete_network(id)`: Delete a single network
+- `qg_delete_network_active(id)`: Delete active network configuration
+- `qg_delete_network_pending(id)`: Delete pending network configuration
 
 ### Security & Access
 
@@ -577,11 +647,15 @@ The server provides **70+ tools** organized by QueryGrid resource type. All tool
 - `qg_get_users()`: Get all users
 - `qg_get_user_by_id(id)`: Get specific user
 - `qg_create_user(name, password, ...)`: Create new user
+- `qg_update_user(id, ...)`: Update existing user
+- `qg_delete_user(id)`: Delete a single user
 
 #### User Mapping Tools
 - `qg_get_user_mappings(filter_by_name)`: Get all user mappings
 - `qg_get_user_mapping_by_id(id)`: Get specific user mapping
 - `qg_create_user_mapping(name, ...)`: Create new user mapping
+- `qg_update_user_mapping(id, ...)`: Update existing user mapping
+- `qg_delete_user_mapping(id)`: Delete a single user mapping
 
 #### Communication Policy Tools
 - `qg_get_comm_policies()`: Get all communication policies
@@ -590,12 +664,18 @@ The server provides **70+ tools** organized by QueryGrid resource type. All tool
 - `qg_get_comm_policy_pending(id)`: Get pending configuration
 - `qg_get_comm_policy_previous(id)`: Get previous configuration
 - `qg_create_comm_policy(name, ...)`: Create new communication policy
+- `qg_update_comm_policy(id, ...)`: Update existing policy
+- `qg_put_comm_policy(id, ...)`: Replace policy configuration
+- `qg_delete_comm_policy(id)`: Delete a single communication policy
+- `qg_delete_comm_policy_active(id)`: Delete active policy configuration
+- `qg_delete_comm_policy_pending(id)`: Delete pending policy configuration
 
 ### Operations & Monitoring
 
 #### Query Tools
 - `qg_get_queries(...)`: Get queries with filtering by state, system, user
 - `qg_get_query_by_id(id)`: Get specific query details
+- `qg_get_query_summary(...)`: Get query summaries with filtering
 - `qg_cancel_query(id)`: Cancel running query
 
 #### Operation Tools
@@ -604,14 +684,18 @@ The server provides **70+ tools** organized by QueryGrid resource type. All tool
 - `qg_run_operation(operation_id, operation_type, ...)`: Execute operation
 - `qg_apply_operation(id)`: Apply pending operation
 - `qg_revert_operation(id)`: Revert operation
+- `qg_bulk_delete(config_type, ids)`: Bulk delete nodes or issues (NOTE: Only supports NODE and ISSUE types)
 
 #### Issue Tools
 - `qg_get_issues()`: Get all issues
 - `qg_get_issue_by_id(id)`: Get specific issue details
+- `qg_create_issue(...)`: Create new issue
+- `qg_delete_issue(id)`: Delete a single issue
 
 #### Diagnostic Tools
 - `qg_run_diagnostic_check(type, ...)`: Run diagnostic check
 - `qg_get_diagnostic_check_status(id)`: Get diagnostic check status
+- `qg_get_create_foreign_server_status(id)`: Get foreign server creation status
 
 ### Software & Configuration
 
@@ -624,6 +708,7 @@ The server provides **70+ tools** organized by QueryGrid resource type. All tool
 #### Foreign Server Tools
 - `qg_get_create_foreign_server_script(...)`: Generate foreign server creation script
 - `qg_get_create_foreign_server_template()`: Get foreign server template
+- `qg_create_foreign_server(...)`: Create foreign server on target system
 
 #### Utilities
 - `qg_get_shared_memory_estimator(...)`: Estimate shared memory requirements
