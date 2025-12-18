@@ -227,13 +227,20 @@ def start_server(
                 reload=True,
                 reload_dirs=[src_dir],
                 log_level=log_level.lower(),
+                log_config=None,
+                timeout_graceful_shutdown=5,
             )
         else:
             # For non-reload mode, add src directory to Python path so uvicorn can import "server"
             if src_dir not in sys.path:
                 sys.path.insert(0, src_dir)
             uvicorn.run(
-                "src.server:app", host=host, port=port, log_level=log_level.lower()
+                "src.server:app",
+                host=host,
+                port=port,
+                log_level=log_level.lower(),
+                log_config=None,
+                timeout_graceful_shutdown=5,
             )
     else:
         # Use uvicorn directly in background mode for consistency and performance
