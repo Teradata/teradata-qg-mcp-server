@@ -62,7 +62,9 @@ def qg_delete_node_virtual_ip(
     id: str,
 ) -> dict[str, Any]:
     """
-    Delete a node virtual IP by ID.
+    Delete a SINGLE node virtual IP by ID.
+
+    Use this tool to delete ONE virtual IP at a time. For deleting multiple virtual IPs at once, do NOT use this tool.
 
     MANDATORY PARAMETER: Ask the user for the virtual IP ID if not provided.
 

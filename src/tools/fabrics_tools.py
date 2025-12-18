@@ -179,12 +179,20 @@ def qg_create_fabric(
     MANDATORY PARAMETERS: Ask the user for 'name', 'port', 'softwareVersion', and 'authKeySize' if not provided.
     OPTIONAL PARAMETERS: 'description' and 'tags' can be omitted.
 
+    ⚠️ CRITICAL GOTCHAS FOR LLMs:
+    1. authKeySize MUST be one of: 1536, 2048, 3072, or 4096 - other values will FAIL
+    2. softwareVersion MUST reference a valid FABRIC software version - use qg_get_software to find available versions
+    3. Invalid authKeySize (e.g., 1024) will cause creation to FAIL
+    4. The port must be available and not in use by other fabrics
+
     Args:
         name (str): [MANDATORY] The name of the fabric.
             Ask the user: "What would you like to name the fabric?"
         port (int): [MANDATORY] The port for the fabric to use for communication between systems.
         softwareVersion (str): [MANDATORY] The software version of the fabric.
-        authKeySize (int): [MANDATORY] The size of the authentication key in bits. Options: 1536, 2048, 3072, 4096.
+            Must be a valid FABRIC software version. Use qg_get_software to list available versions.
+        authKeySize (int): [MANDATORY] The size of the authentication key in bits.
+            MUST be one of: 1536, 2048, 3072, or 4096. Other values will FAIL.
         description (str | None): [OPTIONAL] Description of the fabric.
         tags (dict | None): [OPTIONAL] String key/value pairs for associating some context with the fabric.
 
@@ -214,7 +222,9 @@ def qg_delete_fabric(
     id: str,
 ) -> dict[str, Any]:
     """
-    Delete a fabric by ID.
+    Delete a SINGLE fabric by ID.
+
+    Use this tool to delete ONE fabric at a time. For deleting multiple fabrics at once, do NOT use this tool.
 
     MANDATORY PARAMETER: Ask the user for the fabric ID if not provided.
 

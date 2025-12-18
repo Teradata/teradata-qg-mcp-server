@@ -130,7 +130,9 @@ def qg_delete_node(
     id: str,
 ) -> dict[str, Any]:
     """
-    Delete a node by ID.
+    Delete a SINGLE node by ID.
+
+    Use this tool to delete ONE node at a time. For deleting multiple nodes at once, use qg_bulk_delete instead.
 
     MANDATORY PARAMETER: Ask the user for the node ID if not provided.
 

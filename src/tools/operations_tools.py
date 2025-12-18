@@ -14,12 +14,18 @@ logger = logging.getLogger(__name__)
 @mcp.tool
 def qg_bulk_delete(config_type: str, ids: list[str]) -> dict[str, Any]:
     """
-    Bulk delete nodes or issues.
+    Bulk delete MULTIPLE nodes or issues in a single operation.
+
+    CRITICAL CONSTRAINTS:
+    - This tool ONLY supports NODE and ISSUE entity types
+    - For deleting multiple bridges, links, systems, connectors, fabrics, networks, etc.,
+      there is NO bulk delete - you MUST use the individual delete tools multiple times
+    - For deleting a single node or issue, use qg_delete_node or qg_delete_issue instead
 
     MANDATORY PARAMETERS: Ask the user for 'config_type' and 'ids' if not provided.
 
     Args:
-        config_type (str): [MANDATORY] Type of the configuration object (NODE or ISSUE).
+        config_type (str): [MANDATORY] Type of the configuration object. ONLY accepts: NODE or ISSUE.
         ids (list[str]): [MANDATORY] List of IDs to delete. IDs are in UUID format.
 
     Returns:
@@ -167,7 +173,9 @@ def qg_disable_system_alerts(system_id: str, issue_problem_type: str) -> dict[st
         ResponseType: formatted response with operation results + metadata
     """
     logger.debug(
-        "Tool: qg_disable_system_alerts called with system_id=%s, issue_problem_type=%s", system_id, issue_problem_type
+        "Tool: qg_disable_system_alerts called with system_id=%s, issue_problem_type=%s",
+        system_id,
+        issue_problem_type,
     )
 
     def _call():

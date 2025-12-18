@@ -226,21 +226,34 @@ def qg_create_connector(
         and 'system_id' if not provided.
     OPTIONAL PARAMETERS: All other parameters can be omitted.
 
+    ⚠️ CRITICAL GOTCHAS FOR LLMs:
+    1. fabric_id MUST reference an existing fabric - use qg_get_fabrics to find valid IDs
+    2. system_id MUST reference an existing system - use qg_get_systems to find valid IDs
+    3. software_name and software_version must match available connector software - use qg_get_software
+    4. Missing any of the 5 mandatory parameters will cause creation to FAIL
+    5. Invalid fabric or system IDs will cause creation to FAIL
+
     Args:
         name (str): [MANDATORY] The name of the connector.
             Ask the user: "What would you like to name the connector?"
         software_name (str): [MANDATORY] The name of the software package to use for this connector.
+            Use qg_get_software to find available connector software.
         software_version (str): [MANDATORY] The version of the software package to use for this connector.
+            Must match an available version for the software_name.
         fabric_id (str): [MANDATORY] The ID of the fabric this connector belongs to. ID is in UUID format.
             If the user doesn't know the fabric ID, suggest using qg_get_fabrics to list all fabrics.
+            The fabric MUST already exist.
         system_id (str): [MANDATORY] The ID of the system this connector belongs to. ID is in UUID format.
             If the user doesn't know the system ID, suggest using qg_get_systems to list all systems.
+            The system MUST already exist.
         description (str | None): [OPTIONAL] Description of the connector.
         driver_nodes (list[str] | None): [OPTIONAL] List of node IDs where drivers should be installed.
         properties (dict[str, Any] | None): [OPTIONAL] Properties to configure the connector.
-        overrideable_properties (list[str] | None): [OPTIONAL] List of property names that can be overridden at runtime.
+        overrideable_properties (list[str] | None): [OPTIONAL] List of property names that can be
+            overridden at runtime.
         allowed_os_users (list[str] | None): [OPTIONAL] List of OS users allowed to access this connector.
-        tags (dict[str, Any] | None): [OPTIONAL] String key/value pairs for associating some context with the connector.
+        tags (dict[str, Any] | None): [OPTIONAL] String key/value pairs for associating some context
+            with the connector.
 
     Returns:
         ResponseType: formatted response with operation results + metadata
@@ -273,7 +286,9 @@ def qg_delete_connector(
     id: str,
 ) -> dict[str, Any]:
     """
-    Delete a connector by ID.
+    Delete a SINGLE connector by ID.
+
+    Use this tool to delete ONE connector at a time. For deleting multiple connectors at once, do NOT use this tool.
 
     MANDATORY PARAMETER: Ask the user for the connector ID if not provided.
 

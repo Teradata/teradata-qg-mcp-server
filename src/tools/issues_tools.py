@@ -62,7 +62,9 @@ def qg_delete_issue(
     id: str,
 ) -> dict[str, Any]:
     """
-    Delete an issue by ID.
+    Delete a SINGLE issue by ID.
+
+    Use this tool to delete ONE issue at a time. For deleting multiple issues at once, use qg_bulk_delete instead.
 
     MANDATORY PARAMETER: Ask the user for the issue ID if not provided.
 
@@ -121,21 +123,33 @@ def qg_create_issue(
         and 'reporter_id' if not provided.
     OPTIONAL PARAMETERS: All other parameters can be omitted.
 
+    ⚠️ CRITICAL GOTCHAS FOR LLMs:
+    1. component_type MUST be valid value (e.g., SYSTEM, MANAGER) - invalid values will FAIL
+    2. severity MUST be valid value (e.g., CRITICAL, WARNING) - invalid values will FAIL
+    3. config_version MUST be valid value (ACTIVE, PENDING, PREVIOUS)
+    4. create_time must be in ISO 8601 format (e.g., '2024-01-01T00:00:00Z')
+    5. Empty required fields will cause creation to FAIL
+    6. All 11 mandatory parameters must be provided - missing any will cause FAIL
+
     Args:
         create_time (str): [MANDATORY] The time the issue was created (ISO 8601 format).
-        component_type (str): [MANDATORY] The type of component the issue applies (e.g. SYSTEM or MANAGER).
+            Format: 'YYYY-MM-DDTHH:MM:SSZ' (e.g., '2024-01-01T00:00:00Z')
+        component_type (str): [MANDATORY] The type of component the issue applies.
+            Valid values: SYSTEM, MANAGER. Invalid values will FAIL.
         component_id (str): [MANDATORY] The UUID of the component the issue applies.
         component_name (str): [MANDATORY] The name of the component.
         data_center_name (str): [MANDATORY] The name of the data center.
-        problem_type (str): [MANDATORY] The type of the problem (e.g. NODE_DOWN, WRONG_TIME, CONFIG_DATABASE_DOWN, 
-            SOFTWARE_VERSIONS_INCORRECT, etc).
-        severity (str): [MANDATORY] The severity of the problem (e.g. CRITICAL or WARNING).
+        problem_type (str): [MANDATORY] The type of the problem
+            (e.g., NODE_DOWN, WRONG_TIME, CONFIG_DATABASE_DOWN, SOFTWARE_VERSIONS_INCORRECT, etc).
+        severity (str): [MANDATORY] The severity of the problem.
+            Valid values: CRITICAL, WARNING. Invalid values will FAIL.
         subject_label (str): [MANDATORY] The localizable label that denotes the subject of the issue.
         message_label (str): [MANDATORY] The localizable label that denotes the message of the issue.
-        config_version (str): [MANDATORY] The version of the configuration the issue applies to
-            (e.g. ACTIVE, PENDING, PREVIOUS).
+        config_version (str): [MANDATORY] The version of the configuration the issue applies to.
+            Valid values: ACTIVE, PENDING, PREVIOUS.
         reporter_id (str): [MANDATORY] The ID of the manager that reported the issue.
-        last_alert_time (str | None): [OPTIONAL] The last time an alert was sent for this issue (ISO 8601 format).
+        last_alert_time (str | None): [OPTIONAL] The last time an alert was sent for this issue
+            (ISO 8601 format).
         subject_params (list[str] | None): [OPTIONAL] The parameters to substitute into the subject.
         message_params (list[str] | None): [OPTIONAL] The parameters to substitute into the message.
         meaning_label (str | None): [OPTIONAL] The localizable label that denotes the meaning of the issue.

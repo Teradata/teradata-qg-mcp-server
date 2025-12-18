@@ -68,11 +68,19 @@ def qg_create_user(
     MANDATORY PARAMETERS: Ask the user for 'username' and 'password' if not provided.
     OPTIONAL PARAMETERS: 'description' can be omitted.
 
+    ⚠️ CRITICAL GOTCHAS FOR LLMs:
+    1. Password MUST be at least 14 characters long with special symbols and numbers
+    2. Username MUST be unique - duplicate usernames will cause creation to FAIL
+    3. Empty username or password will cause creation to FAIL
+    4. Special characters (dots, hyphens) are allowed in usernames
+
     Args:
         username (str): [MANDATORY] The username for the new user.
             Ask the user: "What username would you like to create?"
+            Must be unique and non-empty. Can contain special characters like dots and hyphens.
         password (str): [MANDATORY] The password for the new user.
             Ask the user: "What password would you like to set for this user?"
+            MUST be at least 14 characters with special symbols and numbers (e.g., 'TestPass123@abc!').
         description (str | None): [OPTIONAL] Description of the user.
 
     Returns:
@@ -98,7 +106,9 @@ def qg_delete_user(
     username: str,
 ) -> dict[str, Any]:
     """
-    Delete a user by username.
+    Delete a SINGLE user by username.
+
+    Use this tool to delete ONE user at a time. For deleting multiple users at once, do NOT use this tool.
 
     MANDATORY PARAMETER: Ask the user for the username if not provided.
 

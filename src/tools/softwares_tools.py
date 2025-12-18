@@ -119,7 +119,10 @@ def qg_delete_software(
     id: str,
 ) -> dict[str, Any]:
     """
-    Delete a software by ID.
+    Delete a SINGLE software by ID.
+
+    Use this tool to delete ONE software package at a time.
+    For deleting multiple software packages at once, do NOT use this tool.
 
     MANDATORY PARAMETER: Ask the user for the software ID if not provided.
 
@@ -147,7 +150,9 @@ def qg_delete_jdbc_driver(
     id: str,
 ) -> dict[str, Any]:
     """
-    Delete a JDBC driver by ID.
+    Delete a SINGLE JDBC driver by ID.
+
+    Use this tool to delete ONE JDBC driver at a time. For deleting multiple JDBC drivers at once, do NOT use this tool.
 
     MANDATORY PARAMETER: Ask the user for the JDBC driver ID if not provided.
 

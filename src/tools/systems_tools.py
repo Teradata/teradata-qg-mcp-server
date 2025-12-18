@@ -110,17 +110,28 @@ def qg_create_system(
         and 'data_center_id' if not provided.
     OPTIONAL PARAMETERS: All other parameters can be omitted.
 
+    ⚠️ CRITICAL GOTCHAS FOR LLMs:
+    1. System name MUST be unique - duplicate names will cause creation to FAIL
+    2. data_center_id MUST reference an existing datacenter - use qg_get_datacenters to find valid IDs
+    3. software_version MUST be a valid NODE software version - use qg_get_software to find available versions
+    4. maximum_memory_per_node is typically specified in bytes (e.g., 1073741824 for 1GB)
+    5. All 5 mandatory parameters must be provided - missing any will cause FAIL
+
     Args:
         name (str): [MANDATORY] The name of the system.
             Ask the user: "What would you like to name the system?"
-        system_type (str): [MANDATORY] The type of the system.
-        platform_type (str): [MANDATORY] The platform type of the system.
+            Must be unique across all systems.
+        system_type (str): [MANDATORY] The type of the system (e.g., TERADATA).
+        platform_type (str): [MANDATORY] The platform type of the system (e.g., ON_PREM).
         software_version (str): [MANDATORY] Software version.
+            Must be a valid NODE software version. Use qg_get_software to list available versions.
         data_center_id (str): [MANDATORY] Data center ID. ID is in UUID format.
             If the user doesn't know the data center ID, suggest using qg_get_datacenters to list available datacenters.
+            The datacenter MUST already exist.
         description (str | None): [OPTIONAL] Description of the system.
         region (str | None): [OPTIONAL] Region.
-        maximum_memory_per_node (float | None): [OPTIONAL] Maximum memory per node.
+        maximum_memory_per_node (float | None): [OPTIONAL] Maximum memory per node in bytes
+            (e.g., 1073741824 for 1GB).
         bridge_only (bool | None): [OPTIONAL] Bridge only flag.
         proxy_support_type (str | None): [OPTIONAL] Proxy support type.
         proxy_port (int | None): [OPTIONAL] Proxy port.
@@ -174,7 +185,9 @@ def qg_delete_system(
     id: str,
 ) -> dict[str, Any]:
     """
-    Delete a system by ID.
+    Delete a SINGLE system by ID.
+
+    Use this tool to delete ONE system at a time. For deleting multiple systems at once, do NOT use this tool.
 
     MANDATORY PARAMETER: Ask the user for the system ID if not provided.
 

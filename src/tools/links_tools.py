@@ -195,17 +195,29 @@ def qg_create_link(
         and 'commPolicyId' if not provided.
     OPTIONAL PARAMETERS: All other parameters can be omitted.
 
+    ⚠️ CRITICAL GOTCHAS FOR LLMs:
+    1. fabricId MUST reference an existing fabric - use qg_get_fabrics to find valid IDs
+    2. initiatorConnectorId and targetConnectorId MUST reference existing connectors - use qg_get_connectors
+    3. commPolicyId MUST reference an existing communication policy - use qg_get_comm_policies
+    4. Missing any of the 5 mandatory parameters will cause creation to FAIL
+    5. Invalid fabric, connector, or comm policy IDs will cause creation to FAIL
+    6. The fabric must match what the connectors belong to
+
     Args:
         name (str): [MANDATORY] The name of the link.
             Ask the user: "What would you like to name the link?"
         fabricId (str): [MANDATORY] The ID of the fabric the link belongs to. ID is in UUID format.
             If the user doesn't know the fabric ID, suggest using qg_get_fabrics to list all fabrics.
+            The fabric MUST already exist.
         initiatorConnectorId (str): [MANDATORY] The ID of the initiating connector. ID is in UUID format.
             If the user doesn't know the connector ID, suggest using qg_get_connectors to list all connectors.
+            The connector MUST already exist.
         targetConnectorId (str): [MANDATORY] The ID of the target connector. ID is in UUID format.
             If the user doesn't know the connector ID, suggest using qg_get_connectors to list all connectors.
+            The connector MUST already exist.
         commPolicyId (str): [MANDATORY] The ID of the communication policy to use. ID is in UUID format.
             If the user doesn't know the comm policy ID, suggest using qg_get_comm_policies to list all policies.
+            The policy MUST already exist.
         description (str | None): [OPTIONAL] Description of the link.
         initiatorProperties (dict | None): [OPTIONAL] Initiating connector properties.
         overridableInitiatorPropertyNames (list[str] | None): [OPTIONAL] Overridable initiator properties.
@@ -261,7 +273,9 @@ def qg_delete_link(
     id: str,
 ) -> dict[str, Any]:
     """
-    Delete a link by ID.
+    Delete a SINGLE link by ID.
+
+    Use this tool to delete ONE link at a time. For deleting multiple links at once, do NOT use this tool.
 
     MANDATORY PARAMETER: Ask the user for the link ID if not provided.
 

@@ -23,14 +23,26 @@ def qg_create_foreign_server(
 
     ALL PARAMETERS ARE MANDATORY. Ask the user for any missing values.
 
+    ⚠️ CRITICAL GOTCHAS FOR LLMs:
+    1. link_id MUST reference an existing link - use qg_get_links to find valid IDs
+    2. The specified link version (ACTIVE or PENDING) MUST exist - will FAIL if version doesn't exist
+    3. Invalid credentials (admin user/password) will cause creation to FAIL
+    4. Empty credentials will cause creation to FAIL
+    5. version MUST be exactly "ACTIVE" or "PENDING" - other values will FAIL
+
     Args:
         initiator_admin_user (str): [MANDATORY] Admin user on initiator system.
             Ask the user: "What is the admin username on the initiator system?"
+            Cannot be empty.
         initiator_admin_password (str): [MANDATORY] Password of the initiator's admin user.
             Ask the user: "What is the admin password?"
+            Cannot be empty. Must be valid credentials.
         link_id (str): [MANDATORY] Id of the link to create the foreign server for. ID is in UUID format.
             If the user doesn't know the link ID, suggest using qg_get_links to list all links.
-        version (str): [MANDATORY] Version of the link (ACTIVE, PENDING).
+            The link MUST already exist.
+        version (str): [MANDATORY] Version of the link to use.
+            MUST be exactly "ACTIVE" or "PENDING".
+            The specified version must exist for the link - will return 404 if version doesn't exist.
             Ask the user: "Which version should be used: ACTIVE or PENDING?"
         foreign_server_name (str): [MANDATORY] Name of the foreign server to create.
             Ask the user: "What would you like to name the foreign server?"

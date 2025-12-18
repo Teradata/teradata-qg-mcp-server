@@ -186,14 +186,21 @@ def qg_create_comm_policy(
     MANDATORY PARAMETERS: Ask the user for 'name' and 'transfer_concurrency' if not provided.
     OPTIONAL PARAMETERS: All other parameters have defaults and can be omitted.
 
+    ⚠️ CRITICAL GOTCHAS FOR LLMs:
+    1. security_option must be one of 4 valid values - invalid values will FAIL
+    2. security_algorithm must be one of: AES_CRC32C, AES_GCM, AES_SHA256, AES_SHA512
+    3. compression_algorithm must be one of: NONE, ZSTD (or None to default to NONE)
+    4. policy_version must be 1 or 2
+    5. transfer_concurrency must be a positive integer
+
     Args:
        name (str): [MANDATORY] The name of the communication policy.
            Ask the user: "What would you like to name the communication policy?"
-       transfer_concurrency (int): [MANDATORY] The number of streams to use for communication between node pairs for
-        transferring data.
+       transfer_concurrency (int): [MANDATORY] The number of streams to use for communication between
+           node pairs for transferring data. Must be positive integer.
        description (str | None): [OPTIONAL] Description of the communication policy.
        security_option (str): [OPTIONAL] Type of security mechanisms to enable for communication.
-           Valid options:
+           Valid options (MUST be one of these exact values):
            - INTEGRITY_NONE_ENCRYPTION_NONE: IP-based Authentication, no integrity check, no encryption
            - INTEGRITY_CHECKSUM_ENCRYPTION_NONE: IP-based authentication, checksum integrity check, no encryption
            - INTEGRITY_SECURE_ENCRYPTION_CREDENTIALS_ONLY: Key-based authentication, secure Integrity
@@ -202,7 +209,8 @@ def qg_create_comm_policy(
             encrypt all data (default)
        security_algorithm (str): [OPTIONAL] The algorithm to use for integrity checks and encryption.
            Defaults to "AES_GCM". Valid options: AES_CRC32C, AES_GCM, AES_SHA256, AES_SHA512
-       integrity_headers_only (bool): [OPTIONAL] Only perform integrity checks on message headers. Defaults to False.
+       integrity_headers_only (bool): [OPTIONAL] Only perform integrity checks on message headers.
+           Defaults to False.
        authentication_key_size (int): [OPTIONAL] The size of the authentication key. Defaults to 1536.
        encryption_key_size (int): [OPTIONAL] The size of the encryption key. Defaults to 128.
        compression_algorithm (str | None): [OPTIONAL] Compression algorithm to use.
@@ -210,7 +218,8 @@ def qg_create_comm_policy(
            Valid options: NONE, ZSTD
        policy_version (int): [OPTIONAL] The version of comm-policy. Defaults to 2.
            Valid options: 1, 2
-       tags (dict | None): [OPTIONAL] String key/value pairs for associating some context with the communication policy.
+       tags (dict | None): [OPTIONAL] String key/value pairs for associating some context
+           with the communication policy.
 
     Returns:
         ResponseType: formatted response with operation results + metadata
@@ -243,7 +252,10 @@ def qg_delete_comm_policy(
     id: str,
 ) -> dict[str, Any]:
     """
-    Delete a communication policy by ID.
+    Delete a SINGLE communication policy by ID.
+
+    Use this tool to delete ONE communication policy at a time.
+    For deleting multiple policies at once, do NOT use this tool.
 
     MANDATORY PARAMETER: Ask the user for the communication policy ID if not provided.
 

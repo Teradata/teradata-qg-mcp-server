@@ -76,11 +76,17 @@ def qg_create_user_mapping(
     MANDATORY PARAMETER: Ask the user for 'name' if not provided.
     OPTIONAL PARAMETERS: 'user_mapping', 'role_mapping', and 'description' can be omitted.
 
+    ⚠️ CRITICAL GOTCHAS FOR LLMs:
+    1. At least one of user_mapping or role_mapping should typically be provided for a useful mapping
+    2. user_mapping defines how usernames are mapped between systems
+    3. role_mapping defines how roles/groups are mapped between systems
+    4. Both mappings can be complex dictionaries with mapping rules
+
     Args:
         name (str): [MANDATORY] The name of the user mapping.
             Ask the user: "What would you like to name this user mapping?"
-        user_mapping (dict | None): [OPTIONAL] User mapping dictionary.
-        role_mapping (dict | None): [OPTIONAL] Role mapping dictionary.
+        user_mapping (dict | None): [OPTIONAL] User mapping dictionary defining username translations.
+        role_mapping (dict | None): [OPTIONAL] Role mapping dictionary defining role/group translations.
         description (str | None): [OPTIONAL] Description of the user mapping.
 
     Returns:
@@ -107,7 +113,10 @@ def qg_delete_user_mapping(
     mapping_id: str,
 ) -> dict[str, Any]:
     """
-    Delete a user mapping by ID.
+    Delete a SINGLE user mapping by ID.
+
+    Use this tool to delete ONE user mapping at a time.
+    For deleting multiple user mappings at once, do NOT use this tool.
 
     MANDATORY PARAMETER: Ask the user for the user mapping ID if not provided.
 

@@ -188,18 +188,28 @@ def qg_create_network(
     MANDATORY PARAMETERS: Ask the user for 'name' and 'connection_type' if not provided.
     OPTIONAL PARAMETERS: Other parameters can be omitted depending on connection_type.
 
+    ⚠️ CRITICAL GOTCHAS FOR LLMs:
+    1. STANDARD connection type REQUIRES matching_rules to be provided - will FAIL without it
+    2. LOAD_BALANCER connection type REQUIRES load_balancer_address - will FAIL without it
+    3. NO_INGRESS connection type does not require matching_rules or load_balancer_address
+    4. Duplicate network names may cause creation to FAIL depending on QGM configuration
+    5. Invalid connection_type values will cause creation to FAIL
+
     Args:
         name (str): [MANDATORY] The name of the network.
             Ask the user: "What would you like to name the network?"
-        connection_type (str): [MANDATORY] The type of connection. Valid values: STANDARD, LOAD_BALANCER, NO_INGRESS.
-            Note: STANDARD connection type requires matching_rules to be provided.
+            Should be unique to avoid conflicts.
+        connection_type (str): [MANDATORY] The type of connection.
+            Valid values: STANDARD, LOAD_BALANCER, NO_INGRESS.
+            STANDARD requires matching_rules, LOAD_BALANCER requires load_balancer_address.
         description (str | None): [OPTIONAL] Description of the network.
-        matching_rules (list[dict[str, Any]] | None): [OPTIONAL - Required for STANDARD] Rules for identifying
-            network interfaces. Required when connection_type is STANDARD. Each rule should have 'type' and
-            'value' fields. Valid types: 'CIDR_NOTATION' (e.g., '192.168.1.0/24' or '0.0.0.0/0'),
+        matching_rules (list[dict[str, Any]] | None): [REQUIRED for STANDARD, OPTIONAL otherwise]
+            Rules for identifying network interfaces.
+            Each rule must have 'type' and 'value' fields.
+            Valid types: 'CIDR_NOTATION' (e.g., '192.168.1.0/24' or '0.0.0.0/0'),
             'INTERFACE_NAME' (e.g., 'eth0').
-        load_balancer_address (str | None): [OPTIONAL - Required for LOAD_BALANCER] Load balancer address
-            (required if connection_type is LOAD_BALANCER).
+        load_balancer_address (str | None): [REQUIRED for LOAD_BALANCER, OPTIONAL otherwise]
+            Load balancer address. Must be provided when connection_type is LOAD_BALANCER.
         tags (dict | None): [OPTIONAL] String key/value pairs for associating context with the network.
 
     Returns:
@@ -232,7 +242,9 @@ def qg_delete_network(
     id: str,
 ) -> dict[str, Any]:
     """
-    Delete a network by ID.
+    Delete a SINGLE network by ID.
+
+    Use this tool to delete ONE network at a time. For deleting multiple networks at once, do NOT use this tool.
 
     MANDATORY PARAMETER: Ask the user for the network ID if not provided.
 

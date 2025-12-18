@@ -84,14 +84,22 @@ def qg_create_bridge(
     MANDATORY PARAMETERS: Ask the user for 'name' and 'system_id' if not provided.
     OPTIONAL PARAMETERS: 'node_ids' and 'description' can be omitted.
 
+    ⚠️ CRITICAL GOTCHAS FOR LLMs:
+    1. The system_id MUST reference an existing system - will FAIL if system doesn't exist
+    2. If node_ids is omitted, ALL nodes from the specified system will be used
+    3. If node_ids is provided, only those specific nodes will be used as bridge nodes
+    4. Node IDs must belong to the specified system - mixing nodes from different systems will FAIL
+
     Args:
         name (str): [MANDATORY] The name of the bridge.
             Ask the user: "What would you like to name the bridge?"
         system_id (str): [MANDATORY] The system ID associated with the bridge. ID is in UUID format.
             e.g., '123e4567-e89b-12d3-a456-426614174000'
             If the user doesn't know the system ID, suggest using qg_get_systems to list available systems.
+            The system MUST already exist.
         node_ids (list[str] | None): [OPTIONAL] List of node IDs from the specified system to act as a bridge.
             If not provided, all nodes from the system will be used.
+            If provided, nodes must belong to the specified system.
         description (str | None): [OPTIONAL] Description of the bridge.
 
     Returns:
@@ -121,7 +129,9 @@ def qg_delete_bridge(
     id: str,
 ) -> dict[str, Any]:
     """
-    Delete a bridge by ID.
+    Delete a SINGLE bridge by ID.
+
+    Use this tool to delete ONE bridge at a time. For deleting multiple bridges at once, do NOT use this tool.
 
     MANDATORY PARAMETER: Ask the user for the bridge ID if not provided.
 

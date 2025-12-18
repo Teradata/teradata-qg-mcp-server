@@ -80,9 +80,14 @@ def qg_create_datacenter(
     MANDATORY PARAMETER: Ask the user for 'name' if not provided.
     OPTIONAL PARAMETERS: 'description' and 'tags' can be omitted.
 
+    ⚠️ CRITICAL GOTCHAS FOR LLMs:
+    1. Duplicate datacenter names may or may not be allowed depending on QGM configuration
+    2. It's best practice to use unique names to avoid confusion
+
     Args:
         name (str): [MANDATORY] The name of the data center.
             Ask the user: "What would you like to name the data center?"
+            Should preferably be unique.
         description (str | None): [OPTIONAL] Description of the data center.
         tags (dict[str, Any] | None): [OPTIONAL] String key/value pairs for associating some context
             with the data center.
@@ -162,7 +167,9 @@ def qg_delete_datacenter(
     id: str,
 ) -> dict[str, Any]:
     """
-    Delete a data center by ID.
+    Delete a SINGLE data center by ID.
+
+    Use this tool to delete ONE data center at a time. For deleting multiple data centers at once, do NOT use this tool.
 
     MANDATORY PARAMETER: Ask the user for the datacenter ID if not provided.
 
