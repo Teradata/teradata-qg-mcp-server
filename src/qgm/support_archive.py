@@ -20,7 +20,7 @@ class SupportArchiveClient(BaseClient):
         end_time: str | None = None,
         days: str | None = None,
         hours: str | None = None,
-    ) -> dict[str, Any] | list[Any] | str:
+    ) -> bytes:
         """
         Generate and download manager support archive.
 
@@ -30,7 +30,7 @@ class SupportArchiveClient(BaseClient):
             days (str | None): [Optional] The number of days back to include log files, defaults to 7.
             hours (str | None): [Optional] The number of hours back to include log files.
         Returns:
-            dict[str, Any]: The support archive data.
+            bytes: The support archive zip file as binary data.
         """
         params = {}
         if self._is_valid_param(start_time):
@@ -41,9 +41,9 @@ class SupportArchiveClient(BaseClient):
             params["days"] = days
         if self._is_valid_param(hours):
             params["hours"] = hours
-        return self._request("GET", f"{self.BASE_ENDPOINT}/manager", params=params)
+        return self._request("GET", f"{self.BASE_ENDPOINT}/manager", binary=True, params=params)
 
-    def get_support_archive_query(self, queryId: str, all: bool = True) -> dict[str, Any] | list[Any] | str:
+    def get_support_archive_query(self, queryId: str, all: bool = True) -> bytes:
         """
         Generate and download query support archive.
 
@@ -52,16 +52,21 @@ class SupportArchiveClient(BaseClient):
             all (bool): Collect support information for all operations associated with the specified query Id.
 
         Returns:
-            dict[str, Any]: The support archive data.
+            bytes: The support archive zip file as binary data.
         """
         params: dict[str, Any] = {"query": queryId}
         if all:
             params["all"] = all
-        return self._request("GET", f"{self.BASE_ENDPOINT}/query", params=params)
+        return self._request("GET", f"{self.BASE_ENDPOINT}/query", binary=True, params=params)
 
-    def get_support_archive_config(self) -> dict[str, Any] | list[Any] | str:
-        """Generate config support archive."""
-        return self._request("GET", f"{self.BASE_ENDPOINT}/config")
+    def get_support_archive_config(self) -> bytes:
+        """
+        Generate config support archive.
+
+        Returns:
+            bytes: The support archive zip file as binary data.
+        """
+        return self._request("GET", f"{self.BASE_ENDPOINT}/config", binary=True)
 
     def get_support_archive_node(
         self,
@@ -73,7 +78,7 @@ class SupportArchiveClient(BaseClient):
         system_name: str | None = None,
         threads: int | None = None,
         sender: str | None = None,
-    ) -> dict[str, Any] | list[Any] | str:
+    ) -> bytes:
         """
         Generate and download node support archive.
 
@@ -89,7 +94,7 @@ class SupportArchiveClient(BaseClient):
                 Examples - [node, fabric, connector]
 
         Returns:
-            dict[str, Any]: The support archive data.
+            bytes: The support archive zip file as binary data.
         """
         params: dict[str, Any] = {}
         if self._is_valid_param(start_time):
@@ -108,9 +113,9 @@ class SupportArchiveClient(BaseClient):
             params["threads"] = threads
         if self._is_valid_param(sender):
             params["sender"] = sender
-        return self._request("GET", f"{self.BASE_ENDPOINT}/node", params=params)
+        return self._request("GET", f"{self.BASE_ENDPOINT}/node", binary=True, params=params)
 
-    def get_support_archive_diagnostic_check(self, diagnosticCheckId: str) -> dict[str, Any] | list[Any] | str:
+    def get_support_archive_diagnostic_check(self, diagnosticCheckId: str) -> bytes:
         """
         Generate and download diagnostic check support archive.
 
@@ -119,7 +124,7 @@ class SupportArchiveClient(BaseClient):
                 e.g., '123e4567-e89b-12d3-a456-426614174000'.
 
         Returns:
-            dict[str, Any]: The support archive data.
+            bytes: The support archive zip file as binary data.
         """
         params = {"id": diagnosticCheckId}
-        return self._request("GET", f"{self.BASE_ENDPOINT}/diagnostic-check", params=params)
+        return self._request("GET", f"{self.BASE_ENDPOINT}/diagnostic-check", binary=True, params=params)

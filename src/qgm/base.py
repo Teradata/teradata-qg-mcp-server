@@ -28,14 +28,21 @@ class BaseClient:
         """Check if a parameter value is valid (not None, empty string, or 'null' string)."""
         return value is not None and value != "" and value != "null"
 
-    def _request(self, method: str, endpoint: str, **kwargs: Any) -> Any:
+    def _request(self, method: str, endpoint: str, binary: bool = False, **kwargs: Any) -> Any:
         """Make a request to the QGM API.
 
+        Args:
+            method: HTTP method (GET, POST, PUT, PATCH, DELETE)
+            endpoint: API endpoint path
+            binary: If True, return raw binary content. If False, return JSON or text.
+            **kwargs: Additional arguments to pass to requests.Session.request()
+
         Returns:
-            Either a parsed JSON object (dict or list) or a plain text response.
+            bytes if binary=True, otherwise a parsed JSON object (dict or list) or plain text response.
         """
         url = f"{self.base_url}{endpoint}"
-        self.logger.debug("Making %s request to %s", method, url)
+        log_msg = "Making %s request to %s" + (" (binary response expected)" if binary else "")
+        self.logger.debug(log_msg, method, url)
 
         # Ensure a timeout is always set to avoid hanging requests
         if "timeout" not in kwargs:
@@ -62,7 +69,12 @@ class BaseClient:
             self.logger.error("HTTP request failed: %s", exc)
             raise
 
+        if binary:
+            return response.content
+        
         try:
             return response.json()
         except ValueError:
             return response.text
+
+
