@@ -2,9 +2,8 @@ import pytest
 from fastapi.testclient import TestClient
 import types
 
-# Make sure we can import the application package from src
-# sys.path.insert(0, "src")  # Removed for test isolation and portability
-from server import app
+# Import from src package
+from src.server import app
 
 
 class DummyQGManager:
@@ -20,7 +19,7 @@ class DummyQGManager:
 @pytest.fixture(autouse=True)
 def inject_dummy_qg_manager(monkeypatch):
     # Use central setter to inject qg_manager for tests
-    import tools
+    from src import tools
 
     prev_manager = tools.get_qg_manager()  # Save previous manager
     dummy = DummyQGManager(reachable=True)
