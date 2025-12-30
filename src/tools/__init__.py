@@ -47,6 +47,7 @@ from src.tools import (
     queries_tools,
     shared_memory_estimator_tools,
     softwares_tools,
+    support_archive_tools,
     systems_tools,
     user_mapping_tools,
     users_tools,
