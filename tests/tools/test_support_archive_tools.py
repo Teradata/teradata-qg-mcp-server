@@ -154,30 +154,31 @@ class TestSupportArchiveTools:
             assert "Configuration archives are typically small" in str(download_info["notes"])
             assert "credential_note" in download_info
 
-    async def test_qg_download_support_archive_config(
-        self, mcp_client: ClientSession, mock_qgm
-    ):
-        """Test downloading config support archive with base64 encoding."""
-        with patch("src.tools.get_qg_manager", return_value=mock_qgm):
-            # Mock the actual download to return fake zip bytes
-            mock_zip_content = b'PK\x03\x04fake_zip_content'  # Fake zip file signature
-            
-            with patch("src.qgm.support_archive.SupportArchiveClient.get_support_archive_config", 
-                      return_value=mock_zip_content):
-                result = await mcp_client.call_tool(
-                    "qg_download_support_archive_config", arguments={}
-                )
-
-                result_dict = json.loads(result.content[0].text)
-                base64_content = result_dict["result"]
-                
-                # Verify it's a base64-encoded string
-                assert isinstance(base64_content, str)
-                
-                # Verify we can decode it back to the original bytes
-                import base64
-                decoded_bytes = base64.b64decode(base64_content)
-                assert decoded_bytes == mock_zip_content
+    # DISABLED: qg_download_support_archive_config tool has been disabled (slow and inefficient)
+    # async def test_qg_download_support_archive_config(
+    #     self, mcp_client: ClientSession, mock_qgm
+    # ):
+    #     """Test downloading config support archive with base64 encoding."""
+    #     with patch("src.tools.get_qg_manager", return_value=mock_qgm):
+    #         # Mock the actual download to return fake zip bytes
+    #         mock_zip_content = b'PK\x03\x04fake_zip_content'  # Fake zip file signature
+    #         
+    #         with patch("src.qgm.support_archive.SupportArchiveClient.get_support_archive_config", 
+    #                   return_value=mock_zip_content):
+    #             result = await mcp_client.call_tool(
+    #                 "qg_download_support_archive_config", arguments={}
+    #             )
+    #
+    #             result_dict = json.loads(result.content[0].text)
+    #             base64_content = result_dict["result"]
+    #             
+    #             # Verify it's a base64-encoded string
+    #             assert isinstance(base64_content, str)
+    #             
+    #             # Verify we can decode it back to the original bytes
+    #             import base64
+    #             decoded_bytes = base64.b64decode(base64_content)
+    #             assert decoded_bytes == mock_zip_content
 
     async def test_qg_get_support_archive_node_with_filters(
         self, mcp_client: ClientSession, mock_qgm
@@ -322,7 +323,7 @@ class TestSupportArchiveToolsUnit:
             "qg_get_support_archive_manager",
             "qg_get_support_archive_query",
             "qg_get_support_archive_config",
-            "qg_download_support_archive_config",  # Base64 download version
+            # "qg_download_support_archive_config",  # DISABLED - Tool is slow and inefficient
             "qg_get_support_archive_node",
             "qg_get_support_archive_diagnostic_check",
         ]
