@@ -16,23 +16,13 @@ Use these tools when you want to DOWNLOAD A FILE:
 These tools return API URL and connection details.
 The AGENT must then:
 1. Ask the user for QueryGrid Manager credentials
-2. Write a Python script that calls the API URL
-3. Download the zip file using the Python script
+2. Write a bash script (curl) that calls the API URL
+3. Download the zip file using the script
 4. Save the file to disk
 
-📦 qg_download_support_archive_* tools (Download and Create Zip File):
-----------------------------------------------------------------------
-Use these tools when you need to download and create a zip file:
-- qg_download_support_archive_config()
-
-These tools:
-1. Automatically download using pre-configured credentials
-2. Return base64-encoded content
-3. Agent must use bash or Python to decode content and create zip file
-
-DEFAULT BEHAVIOR:
-- User asks to "download support archive" → Use qg_get_* (agent writes Python script)
-- User asks for "content" or "base64" → Use qg_download_* (agent creates zip from base64)
+DOWNLOAD METHOD:
+- Bash script with curl (universal, available on most systems)
+- curl examples provided in each tool's documentation
 """
 
 from __future__ import annotations
@@ -59,7 +49,6 @@ def qg_get_support_archive_manager(
     
     ⚠️ THIS TOOL RETURNS API URL - NOT FILE CONTENT
     Use this tool when user wants to DOWNLOAD A FILE.
-    For base64-encoded content, use qg_download_support_archive_config() instead.
 
     🚨 CRITICAL INSTRUCTIONS FOR AI AGENTS - READ CAREFULLY:
     ========================================================
@@ -84,43 +73,34 @@ def qg_get_support_archive_manager(
     ==============
     1. Call this tool to get API URL and connection details
     2. Ask user for QueryGrid Manager username and password
-    3. Write a Python script that:
-       - Uses the returned API URL (not this tool)
-       - Authenticates with user-provided credentials
-       - Downloads the zip file from QueryGrid Manager
-       - Saves it to disk
-    4. Execute the Python script to download the file
+    3. Write a bash script (curl) that calls the API URL
+    4. Execute the script to download the file
 
-    PYTHON SCRIPT EXAMPLE (for agent to write):
-    ```python
-    import requests
-    from pathlib import Path
-
-    # API details from tool response
-    api_url = "https://qgm-host:9443/api/support-archive/manager?days=7"
-    verify_ssl = False
+    CURL SCRIPT EXAMPLE (for agent to write):
+    ```bash
+    #!/bin/bash
+    # API details from tool response (agent already called qg_get_support_archive_manager)
+    API_URL="<full_url_from_tool_response>"  # e.g., "https://qgm-host:9443/api/support-archive/manager?days=7"
+    VERIFY_SSL="<verify_ssl_from_tool_response>"  # true or false
     
     # Credentials from user
-    username = "<user_provided_username>"
-    password = "<user_provided_password>"
+    USERNAME="<user_provided_username>"
+    PASSWORD="<user_provided_password>"
     
-    # Download the file
-    response = requests.get(
-        api_url,
-        auth=(username, password),
-        verify=verify_ssl,
-        headers={"Accept": "application/zip"},
-        stream=True
-    )
-    response.raise_for_status()
+    # Download with curl
+    if [ "$VERIFY_SSL" = "false" ]; then
+        curl -k -u "$USERNAME:$PASSWORD" \
+             -H "Accept: application/zip" \
+             -o "qgm_manager_archive.zip" \
+             "$API_URL"
+    else
+        curl -u "$USERNAME:$PASSWORD" \
+             -H "Accept: application/zip" \
+             -o "qgm_manager_archive.zip" \
+             "$API_URL"
+    fi
     
-    # Save to file
-    output_path = Path.home() / "Downloads" / "qgm_manager_archive.zip"
-    with open(output_path, 'wb') as f:
-        for chunk in response.iter_content(chunk_size=8192):
-            f.write(chunk)
-    
-    print(f"Downloaded to: {output_path}")
+    echo "Downloaded to: qgm_manager_archive.zip"
     ```
 
     FILE SAVE LOCATIONS (OS-specific defaults):
@@ -181,7 +161,9 @@ def qg_get_support_archive_manager(
             full_url += f"?{query_string}"
 
         # Determine SSL verification
-        verify_ssl = client.session.verify if hasattr(client.session, "verify") else True
+        verify_ssl = (
+            client.session.verify if hasattr(client.session, "verify") else True
+        )
 
         return {
             "full_url": full_url,
@@ -231,32 +213,31 @@ def qg_get_support_archive_query(
     
     If credentials were in the original user request, use those. Otherwise, ASK EXPLICITLY.
 
-    PYTHON SCRIPT EXAMPLE (for agent to write):
-    ```python
-    import requests
-    
-    # API details from tool response
-    api_url = "https://qgm-host:9443/api/support-archive/query?all=true"
-    verify_ssl = False
+    CURL SCRIPT EXAMPLE (for agent to write):
+    ```bash
+    #!/bin/bash
+    # API details from tool response (agent already called qg_get_support_archive_query)
+    API_URL="<full_url_from_tool_response>"  # e.g., "https://qgm-host:9443/api/support-archive/query?all=true"
+    VERIFY_SSL="<verify_ssl_from_tool_response>"  # true or false
     
     # Credentials from user
-    username = "<user_provided_username>"
-    password = "<user_provided_password>"
+    USERNAME="<user_provided_username>"
+    PASSWORD="<user_provided_password>"
     
-    # Download
-    response = requests.get(
-        api_url,
-        auth=(username, password),
-        verify=verify_ssl,
-        headers={"Accept": "application/zip"},
-        stream=True
-    )
-    response.raise_for_status()
+    # Download with curl (use -k to skip SSL verification if needed)
+    if [ "$VERIFY_SSL" = "false" ]; then
+        curl -k -u "$USERNAME:$PASSWORD" \
+             -H "Accept: application/zip" \
+             -o "qgm_query_archive.zip" \
+             "$API_URL"
+    else
+        curl -u "$USERNAME:$PASSWORD" \
+             -H "Accept: application/zip" \
+             -o "qgm_query_archive.zip" \
+             "$API_URL"
+    fi
     
-    # Save to file
-    with open('qgm_query_archive.zip', 'wb') as f:
-        for chunk in response.iter_content(chunk_size=8192):
-            f.write(chunk)
+    echo "Downloaded to: qgm_query_archive.zip"
     ```
 
     WHAT THIS ARCHIVE CONTAINS:
@@ -294,7 +275,9 @@ def qg_get_support_archive_query(
         if query_string:
             full_url += f"?{query_string}"
 
-        verify_ssl = client.session.verify if hasattr(client.session, "verify") else True
+        verify_ssl = (
+            client.session.verify if hasattr(client.session, "verify") else True
+        )
 
         return {
             "full_url": full_url,
@@ -326,9 +309,6 @@ def qg_get_support_archive_config() -> dict[str, Any]:
     
     ⚠️ THIS TOOL RETURNS API URL - NOT FILE CONTENT
     Use this tool when user wants to DOWNLOAD A FILE.
-    
-    💡 ALTERNATIVE: If user asks for BASE64-ENCODED CONTENT or "the content" directly,
-    use qg_download_support_archive_config() instead - it returns base64-encoded content.
 
     🚨 CRITICAL INSTRUCTIONS FOR AI AGENTS - READ CAREFULLY:
     ========================================================
@@ -336,9 +316,34 @@ def qg_get_support_archive_config() -> dict[str, Any]:
     
     ⛔ DO NOT use credentials from get_qg_manager() or any other source.
     ✅ ASK THE USER: "What is your QueryGrid Manager username and password?"
-    
-    NOTE: Use qg_download_support_archive_config() if you want automatic download with pre-configured credentials.
 
+    CURL SCRIPT EXAMPLE (for agent to write):
+    ```bash
+    #!/bin/bash
+    # API details from tool response (agent already called qg_get_support_archive_config)
+    API_URL="<full_url_from_tool_response>"  # e.g., "https://qgm-host:9443/api/support-archive/config"
+    VERIFY_SSL="<verify_ssl_from_tool_response>"  # true or false
+    
+    # Credentials from user
+    USERNAME="<user_provided_username>"
+    PASSWORD="<user_provided_password>"
+    
+    # Download with curl
+    if [ "$VERIFY_SSL" = "false" ]; then
+        curl -k -u "$USERNAME:$PASSWORD" \
+             -H "Accept: application/zip" \
+             -o "qgm_config_archive.zip" \
+             "$API_URL"
+    else
+        curl -u "$USERNAME:$PASSWORD" \
+             -H "Accept: application/zip" \
+             -o "qgm_config_archive.zip" \
+             "$API_URL"
+    fi
+    
+    echo "Downloaded to: qgm_config_archive.zip"
+    ```
+    
     WHAT THIS ARCHIVE CONTAINS:
     - All QueryGrid configurations
     - Links, fabrics, connectors, systems
@@ -357,7 +362,9 @@ def qg_get_support_archive_config() -> dict[str, Any]:
         client = SupportArchiveClient(qg_manager.session, qg_manager.base_url)
 
         full_url = f"{client.base_url}/api/support-archive/config"
-        verify_ssl = client.session.verify if hasattr(client.session, "verify") else True
+        verify_ssl = (
+            client.session.verify if hasattr(client.session, "verify") else True
+        )
 
         return {
             "full_url": full_url,
@@ -381,101 +388,6 @@ def qg_get_support_archive_config() -> dict[str, Any]:
 
 
 @mcp.tool
-def qg_download_support_archive_config() -> dict[str, Any]:
-    """
-    Download QueryGrid configuration archive directly (returns base64-encoded zip file).
-    
-    ✅ THIS TOOL RETURNS BASE64-ENCODED CONTENT - NOT API URL
-    Use this tool when user asks for:
-    - "Get me the config archive content"
-    - "Show me the config archive in base64"
-    - "Download config archive as base64"
-    
-    🚫 DO NOT use this tool when user asks to:
-    - "Download the config archive" (use qg_get_support_archive_config() instead)
-    - "Give me the API to download" (use qg_get_support_archive_config() instead)
-
-    ✅ THIS TOOL USES PRE-CONFIGURED CREDENTIALS: Unlike the qg_get_support_archive_* 
-    tools, this tool automatically downloads the file using credentials from get_qg_manager().
-    You do NOT need to ask the user for credentials when using this tool.
-
-    ⚠️ RETURNS BASE64 CONTENT: This tool returns base64-encoded zip content.
-    The AGENT must create the actual zip file using bash or Python.
-
-    AGENT WORKFLOW:
-    ==============
-    1. Call this tool to get base64-encoded zip content
-    2. Write a bash or Python script to decode and create zip file
-    3. Execute the script to create the zip file
-    4. Make the zip file available to the user
-
-    PYTHON SCRIPT EXAMPLE (for agent to write):
-    ```python
-    import base64
-    
-    # Base64 content from tool response
-    base64_content = "<base64_string_from_tool_response>"
-    
-    # Decode and write to zip file
-    zip_bytes = base64.b64decode(base64_content)
-    with open('qgm_config_archive.zip', 'wb') as f:
-        f.write(zip_bytes)
-    
-    print("Zip file created: qgm_config_archive.zip")
-    ```
-
-    BASH SCRIPT EXAMPLE (for agent to write):
-    ```bash
-    # Decode base64 and create zip file
-    echo "<base64_string_from_tool_response>" | base64 -d > qgm_config_archive.zip
-    ```
-
-    FILE SAVE LOCATION:
-    - Ask the user where they want to save the file
-    - Default suggestions by OS:
-      * Linux: /tmp/qgm_config_archive.zip
-      * macOS: ~/Downloads/qgm_config_archive.zip
-      * Windows: %USERPROFILE%\\Downloads\\qgm_config_archive.zip
-
-    WHAT THIS ARCHIVE CONTAINS:
-    - All QueryGrid configurations
-    - Links, fabrics, connectors, systems
-    - Usually small (<10MB)
-
-    Returns:
-        dict: Base64-encoded zip file data in the 'result' field
-    """
-
-    def _call() -> str:
-        import base64
-        from src.qgm.support_archive import SupportArchiveClient
-
-        qg_manager = tools.get_qg_manager()
-        if qg_manager is None:
-            raise RuntimeError("QueryGridManager is not initialized")
-        client = SupportArchiveClient(qg_manager.session, qg_manager.base_url)
-
-        # Get the zip file as bytes
-        zip_bytes = client.get_support_archive_config()
-        
-        # Check file size and log warning for large files
-        file_size_mb = len(zip_bytes) / (1024 * 1024)
-        logger.info(f"Config archive size: {file_size_mb:.2f} MB")
-        
-        if file_size_mb > 10:
-            logger.warning(
-                "Config archive is larger than expected: %.2f MB. "
-                "Base64 encoding will increase size to ~%.2f MB.",
-                file_size_mb, file_size_mb * 1.33
-            )
-        
-        # Convert bytes to base64 string for JSON serialization
-        return base64.b64encode(zip_bytes).decode('utf-8')
-
-    return run_tool("qg_download_support_archive_config", _call)
-
-
-@mcp.tool
 def qg_get_support_archive_node(
     system_id: str | None = None,
     fabric_id: str | None = None,
@@ -494,6 +406,35 @@ def qg_get_support_archive_node(
     
     ⛔ DO NOT use credentials from get_qg_manager(), environment variables, or config.
     ✅ ASK THE USER: "What is your QueryGrid Manager username and password?"
+
+    CURL SCRIPT EXAMPLE (for agent to write):
+    ```bash
+    #!/bin/bash
+    # API details from tool response (agent already called qg_get_support_archive_node)
+    API_URL="<full_url_from_tool_response>"  # e.g., "https://qgm-host:9443/api/support-archive/node?systemId=abc-123"
+    VERIFY_SSL="<verify_ssl_from_tool_response>"  # true or false
+    
+    # Credentials from user
+    USERNAME="<user_provided_username>"
+    PASSWORD="<user_provided_password>"
+    
+    # Download with curl and progress bar for large files
+    if [ "$VERIFY_SSL" = "false" ]; then
+        curl -k -u "$USERNAME:$PASSWORD" \
+             -H "Accept: application/zip" \
+             -o "qgm_node_archive.zip" \
+             --progress-bar \
+             "$API_URL"
+    else
+        curl -u "$USERNAME:$PASSWORD" \
+             -H "Accept: application/zip" \
+             -o "qgm_node_archive.zip" \
+             --progress-bar \
+             "$API_URL"
+    fi
+    
+    echo "Downloaded to: qgm_node_archive.zip"
+    ```
 
     WHAT THIS ARCHIVE CONTAINS:
     - Node logs from all matching nodes
@@ -535,7 +476,9 @@ def qg_get_support_archive_node(
         if query_string:
             full_url += f"?{query_string}"
 
-        verify_ssl = client.session.verify if hasattr(client.session, "verify") else True
+        verify_ssl = (
+            client.session.verify if hasattr(client.session, "verify") else True
+        )
 
         notes = [
             "Node archives can be extremely large without filters",
@@ -584,6 +527,33 @@ def qg_get_support_archive_diagnostic_check(
     ⛔ DO NOT use credentials from get_qg_manager() or any pre-configured source.
     ✅ ASK THE USER: "What is your QueryGrid Manager username and password?"
 
+    CURL SCRIPT EXAMPLE (for agent to write):
+    ```bash
+    #!/bin/bash
+    # API details from tool response (agent already called qg_get_support_archive_diagnostic_check)
+    API_URL="<full_url_from_tool_response>"  # e.g., "https://qgm-host:9443/api/support-archive/diagnostic-check?checkId=abc-123"
+    VERIFY_SSL="<verify_ssl_from_tool_response>"  # true or false
+    
+    # Credentials from user
+    USERNAME="<user_provided_username>"
+    PASSWORD="<user_provided_password>"
+    
+    # Download with curl
+    if [ "$VERIFY_SSL" = "false" ]; then
+        curl -k -u "$USERNAME:$PASSWORD" \
+             -H "Accept: application/zip" \
+             -o "qgm_diagnostic_archive.zip" \
+             "$API_URL"
+    else
+        curl -u "$USERNAME:$PASSWORD" \
+             -H "Accept: application/zip" \
+             -o "qgm_diagnostic_archive.zip" \
+             "$API_URL"
+    fi
+    
+    echo "Downloaded to: qgm_diagnostic_archive.zip"
+    ```
+
     WHAT THIS ARCHIVE CONTAINS:
     - Diagnostic check results and logs
     - Size varies by check type (usually <100MB)
@@ -612,7 +582,9 @@ def qg_get_support_archive_diagnostic_check(
         if query_string:
             full_url += f"?{query_string}"
 
-        verify_ssl = client.session.verify if hasattr(client.session, "verify") else True
+        verify_ssl = (
+            client.session.verify if hasattr(client.session, "verify") else True
+        )
 
         return {
             "full_url": full_url,
